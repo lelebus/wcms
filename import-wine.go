@@ -130,7 +130,13 @@ func checkWine(wine Wine) error {
 }
 
 // Insert wine in database, checking insertion in other catalogs
+<<<<<<< HEAD:import-file.go
 func insertWine(wine Wine) {
 	// IF ALREADY IN DB, UPDATE WITH INPUT VALUES
 	// CHECK IF IT SATISFIES REQUIREMENTS FOR SOME CATALOG
 }
+=======
+func InsertWine(w Wine) {
+	
+}
+>>>>>>> 8a2bca13f8a00d3d98378d639f5742bc598b5d9e:import-wine.go
