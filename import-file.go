@@ -1,123 +1,136 @@
-package main
+package wine
 
 import (
-	"os"
-	"io"
 	"encoding/json"
 	"strings"
 	"log"
+	"net/http"
 	"errors"
 	"strconv"
 	"time"
 )
 
-func init() {
-		logfile, err := os.OpenFile("/tmp/wcms.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("error opening file: %v", err)
-		}
-		defer logfile.Close()
+func WineHandler (w http.ResponseWriter, r *http.Request) {
+	accept := strings.Split(r.Header.Get("Accept"), ";")
+	if accept[0] != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in Header "Accept" field: just "application/json" is accepted`)
+		return
+	}
 
-		wrt := io.MultiWriter(os.Stdout, logfile)
-		log.SetOutput(wrt)
+	switch r.Method {
+	// case "GET": getWine(r, w)
+	default: createWine(w, r) 
+	}
 }
 
-func main() {
+// Writes JSON response for request error
+func writeError(id string, message string, w http.ResponseWriter) {
+	var body = `{ "id":"` + id + `", "message":"` + message + `" }`
+	http.Error(w, body, 422)
+}
 
-	log.Println("API IMPORT called")
+// Handles POST method for wine import
+func createWine(w http.ResponseWriter, r *http.Request) {
+	var input = r.Body()
 
-	var input = `
+	// MOCKUP from back-end 
+	input = `
 	[		
-		{"type": "white", "area": "A 13", "name": "Gaja & Rej", "winery": "Gaja", "year": "2011", "size": "0.75", "region": "langhe - piemonte", "country": "I", "price": "110.00", "catalog": "Speciali Italia", "detail": "", "internal-notes": ""},
-		{"type": "red", "area": "A 13", "name": "Gaja Super", "winery": "Gaja", "year": "2015", "size": "0.75", "region": "langhe - piemonte", "country": "I", "price": "250.00", "catalog": "Speciali Italia", "detail": "", "internal-notes": ""}
+		{"id": "1", "type": "white", "area": "A 13", "name": "Gaja & Rej", "winery": "Gaja", "year": "2011", "size": "0.75", "region": "langhe - piemonte", "country": "I", "price": "110.00", "catalog": "Speciali Italia", "details": "", "internalnotes": ""},
+		{"id": "2", "type": "red", "area": "A 13", "name": "Gaja Super", "winery": "Gaja", "year": "2015", "size": "0.75", "region": "langhe - piemonte", "country": "I", "price": "250.00", "catalog": "Speciali Italia", "details": "", "internal-notes": "ALfababab"}
 	]`
+	// END MOCKUP
 
-	wines := ReadWine(input)
+	err, wines := readWine(input)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 
-	var linehop int
-
-	switch len(wines) {
-	case 0: log.Fatal("ERROR in import: empty file")
-	case 1: linehop = 1
-	case 2: linehop = 2
-	} 
-
-	for line, w := range wines {  
-		err := CheckWine(line+linehop, w)
+	for _, wine := range wines {  
+		err = checkWine(wine)
 		if err != nil {
-			log.Fatal(err)
+			writeError(wine.ID, err.Error(), w)
+			log.Println(err)
+			return
 		}
 	}
 	
-	for line, w := range wines {
-		InsertWine(w)
+	for _, wine := range wines {
+		insertWine(wine)
 
-		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", w.Name, w.Winery, w.Year, line+linehop)
+		w.WriteHeader(http.StatusOK)
+		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
 }
 
 // Create array of Wine from json array given as input
-func ReadWine(input string) (wines []Wine) {
+func readWine(input string) (error, []Wine) {
+	var wines []Wine
+
 	decoder := json.NewDecoder(strings.NewReader(input))
 
 	// read open bracket
 	_, err := decoder.Token()
 	if err != nil {
-		log.Fatal(err)
+		return err, nil
 	}
 
 	for decoder.More() {
-		var w Wine
+		var wine Wine
 		// decode line 
-		err := decoder.Decode(&w)
+		err := decoder.Decode(&wine)
 		if err != nil {
-			log.Fatal(err)
+			return err, nil
 		}
 
-		wines = append(wines, w)
-		log.Printf("SUCCESSFUL reading from import JSON:  \"%v BY %v - %v\" \n", w.Name, w.Winery, w.Year)
+		wines = append(wines, wine)
+		log.Printf("SUCCESSFUL reading from import JSON:  \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
 	}
 
 	// read closing bracket
 	_, err = decoder.Token()
 	if err != nil {
-		log.Fatal(err)
+		return err, nil
 	}
 
-	return
+	return nil, wines
 }
 
 // Check that all parameters of a wine are accepted
-func CheckWine(line int, w Wine) error { 
+func checkWine(wine Wine) error { 
 
-	if !contains(WineType, strings.ToLower(w.Type)) {
-		err := "ERROR in parameter checking: " + w.Type + " is not an accepted TYPE for wine. Check line " + strconv.Itoa(line)
+	if !contains(WineType, strings.ToLower(wine.Type)) {
+		err := "ERROR in parameter checking: " + wine.Type + " is not an accepted TYPE for wine. Check line " + wine.ID
 		return errors.New(err)
 	} 
 
-	if !contains(WineSize, w.Size) {
-		err := "ERROR in parameter checking: " + w.Size + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + strconv.Itoa(line)
+	if !contains(WineSize, wine.Size) {
+		err := "ERROR in parameter checking: " + wine.Size + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
 		return errors.New(err)
 	}
 
 	dt := time.Now()
 	currentYear := dt.Format("02-01-2006")
-	if w.Year > currentYear[6:] {
-		err := "ERROR in parameter checking: YEAR of wine cannot be set in the future. Check line " + strconv.Itoa(line)
+	if wine.Year > currentYear[6:] {
+		err := "ERROR in parameter checking: YEAR of wine cannot be set in the future. Check line " + wine.ID
 		return errors.New(err)
 	} 
 
-	v, err := strconv.ParseFloat(w.Price,10)
+	v, err := strconv.ParseFloat(wine.Price,10)
 	if err != nil || v < 0 {
-		err := "ERROR in parameter checking: " + w.Price + " is not an accepted PRICE for wine (Must be positive and have . as decimal separator. Check line " + strconv.Itoa(line)
+		err := "ERROR in parameter checking: " + wine.Price + " is not an accepted PRICE for wine (Must be positive and have . as decimal separator. Check line " + wine.ID
 		return errors.New(err)
 	}
 
-	log.Printf("SUCCESSFUL parameter checking: \"%v BY %v - %v\" at line %v \n", w.Name, w.Winery, w.Year, line)
+	log.Printf("SUCCESSFUL parameter checking: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	return nil
 }
 
 // Insert wine in database, checking insertion in other catalogs
-func InsertWine(w Wine) {
-	
+func insertWine(wine Wine) {
+	// IF ALREADY IN DB, UPDATE WITH INPUT VALUES
+	// CHECK IF IT SATISFIES REQUIREMENTS FOR SOME CATALOG
 }
