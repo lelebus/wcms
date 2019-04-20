@@ -1,16 +1,18 @@
 package wine
 
 type Wine struct {
-	ID string
-	Area string
-	Type string
-	Size string
-	Name string
-	Winery string
-	Year string
-	Region, Country string
-	Price string
-	Catalog, Details string
+	ID string `json:"id"`
+	Area string `json:"area"` 
+	Type string `json:"type"`
+	Size string `json:"size"`
+	Name string `json:"name"`
+	Winery string `json:"winery"`
+	Year string `json:"year"`
+	Region string `json:"region"`
+	Country string `json:"country"`
+	Price string `json:"price"`
+	Catalog string `json:"catalog"`
+	Details string `json:"details"`
 	InternalNotes string `json:"internal-notes"`
 }
 
