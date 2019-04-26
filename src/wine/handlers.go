@@ -15,7 +15,6 @@ var DB *sql.DB
 
 // Multiplexer for handling /wine requests
 func WineHandler (w http.ResponseWriter, r *http.Request) {
-
 	// check correctness of request
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "", 415)
@@ -46,11 +45,16 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len("/wine/"):]
 	
 	var query = `SELECT ID, area, type, size, name, winery, year, region, country, price, catalog, details, internalnotes FROM wine `
-	
+	var err error
+	var body []byte
+
+	// for single wine get more details and purchases
 	if selection != "" {
 		query += "WHERE id = " + selection
+		body, err = queryWine(false, query)
+	} else {
+		body, err = queryWine(true, query)
 	}
-	body, err := queryWine(query)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
@@ -62,7 +66,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func queryWine(query string) ([]byte, error) {
+func queryWine(all bool, query string) ([]byte, error) {
 
 	// query database
 	rows, err := DB.Query(query)
@@ -78,7 +82,14 @@ func queryWine(query string) ([]byte, error) {
 		wine := Wine{}
 
 		// FINISH WHEN DB READY
-		err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
+		if all {
+			err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
+		} else {
+			err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )	
+			// QUERY PURCHASE		
+		}
+		//
+		
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
 			return nil, err
@@ -232,16 +243,10 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func deleteWine(w http.ResponseWriter, r *http.Request) {
-	err, wines := readWine(r)
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
-	wine := wines[0]
+	selection := r.URL.Path[len("/wine/"):]
 
 	// DELETE query
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL delete: \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
+	log.Printf("SUCCESSFUL delete ID: %v \n", selection)
 }

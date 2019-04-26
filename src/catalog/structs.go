@@ -11,4 +11,5 @@ type Catalog struct {
 	Country []string `json:"country"`
 	Winery []string `json:"winery"`
 	Storage []string `json:"storage"`
+	Wine string
 }

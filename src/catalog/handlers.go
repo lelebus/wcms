@@ -26,6 +26,11 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//////////////////////////////////////////////////////////
+//
+// Handle GET method for catalog
+//
+//////////////////////////////////////////////////////////
 func getCatalog(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len("/wine/"):]
 	
@@ -34,7 +39,7 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 
 	if selection == "" {
-		query = `SELECT  ` //QUERY ALL WINES
+		query = `SELECT name, level FROM catalog` //QUERY ALL CATALOGS
 		body, err = queryCatalog(true, query)
 	} else {
 		body, err = queryCatalog(false, query)
@@ -90,3 +95,9 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 
 	return body, nil
 }
+
+//////////////////////////////////////////////////////////
+//
+// Handle POST method for catalog creation
+//
+//////////////////////////////////////////////////////////
