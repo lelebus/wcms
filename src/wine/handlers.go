@@ -3,18 +3,19 @@ package wine
 import (
 	"database/sql"
 	"encoding/json"
-	"strings"
+	"errors"
 	"log"
 	"net/http"
-	"errors"
 	"strconv"
+	"strings"
 	"time"
 )
 
+// DB Connection
 var DB *sql.DB
 
 // Multiplexer for handling /wine requests
-func WineHandler (w http.ResponseWriter, r *http.Request) {
+func WineHandler(w http.ResponseWriter, r *http.Request) {
 	// check correctness of request
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "", 415)
@@ -23,10 +24,14 @@ func WineHandler (w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET": getWine(w, r)
-	case "POST": createWine(w, r) 
-	case "PATCH": updateWine(w, r)
-	case "DELETE": deleteWine(w, r)
+	case "GET":
+		getWine(w, r)
+	case "POST":
+		createWine(w, r)
+	case "PATCH":
+		updateWine(w, r)
+	case "DELETE":
+		deleteWine(w, r)
 	}
 }
 
@@ -43,7 +48,7 @@ func writeError(id string, message string, w http.ResponseWriter) {
 //////////////////////////////////////////////////////////
 func getWine(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len("/wine/"):]
-	
+
 	var query = `SELECT ID, area, type, size, name, winery, year, region, country, price, catalog, details, internalnotes FROM wine `
 	var err error
 	var body []byte
@@ -61,41 +66,54 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type","application-json")
+	w.Header().Set("Content-Type", "application-json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
 
 func queryWine(all bool, query string) ([]byte, error) {
 
-	// query database
-	rows, err := DB.Query(query)
-	if err != nil {
-		err = errors.New("ERROR in retrieving wine entries from DB: " + err.Error())
-		return nil, err
+	// MOCK UP
+	var wines []Wine
+	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "France", "500", "Stellar Wines", "Recently Disgorged", ""}
+	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Italia", "90", "", "Macerazione uve", "Alfa Beta Gamma e tu Mamma"}
+	if all {
+		wines = []Wine{one, two}
+	} else {
+		wines = []Wine{one}
 	}
-	defer rows.Close()
+	// END
 
-	// read retrieved lines
-	wines := make([]Wine, 0)
-	for rows.Next() {
-		wine := Wine{}
-
-		// FINISH WHEN DB READY
-		if all {
-			err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
-		} else {
-			err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )	
-			// QUERY PURCHASE		
-		}
-		//
-		
+	// WITH DATABASE
+	/*
+		// query database
+		rows, err := DB.Query(query)
 		if err != nil {
-			err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
+			err = errors.New("ERROR in retrieving wine entries from DB: " + err.Error())
 			return nil, err
 		}
-		wines = append(wines, wine)
-	}
+		defer rows.Close()
+
+		// read retrieved lines
+		wines := make([]Wine, 0)
+		for rows.Next() {
+			wine := Wine{}
+
+			// FINISH WHEN DB READY
+				if all {
+					err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
+				} else {
+					err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
+					// QUERY PURCHASE
+				}
+
+			if err != nil {
+				err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
+				return nil, err
+			}
+			wines = append(wines, wine)
+		}
+	*/
 
 	// marshal wines
 	body, err := json.Marshal(wines)
@@ -114,24 +132,27 @@ func queryWine(all bool, query string) ([]byte, error) {
 //////////////////////////////////////////////////////////
 func createWine(w http.ResponseWriter, r *http.Request) {
 
-	err, wines := readWine(r)
+	wines, err := readWine(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
 
-	for _, wine := range wines {  
-		id_error, err := checkWine(wine)
+	for _, wine := range wines {
+		idError, err := checkWine(wine)
 		if err != nil {
-			writeError(id_error, err.Error(), w)
+			writeError(idError, err.Error(), w)
 			log.Println("ERROR in parameter checking: " + err.Error())
 			return
 		}
 	}
-	
+
 	for _, wine := range wines {
-		insertWine(wine)
+		err := insertWine(wine)
+		if err != nil {
+			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		}
 
 		w.WriteHeader(http.StatusOK)
 		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
@@ -139,7 +160,7 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create array of Wine from json array given as input
-func readWine(r *http.Request) (error, []Wine) {
+func readWine(r *http.Request) ([]Wine, error) {
 	var wines []Wine
 
 	decoder := json.NewDecoder(r.Body)
@@ -147,15 +168,15 @@ func readWine(r *http.Request) (error, []Wine) {
 	// read open bracket
 	_, err := decoder.Token()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	for decoder.More() {
 		var wine Wine
-		// decode line 
+		// decode line
 		err := decoder.Decode(&wine)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 
 		wines = append(wines, wine)
@@ -165,19 +186,19 @@ func readWine(r *http.Request) (error, []Wine) {
 	// read closing bracket
 	_, err = decoder.Token()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, wines
+	return wines, nil
 }
 
 // Check that all parameters of a wine are accepted
-func checkWine(wine Wine) (string, error) { 
+func checkWine(wine Wine) (string, error) {
 
 	if !contains(WineType, strings.ToLower(wine.Type)) {
 		e := wine.Type + " is not an accepted TYPE for wine. Check line " + wine.ID
 		return "type", errors.New(e)
-	} 
+	}
 
 	if !contains(WineSize, wine.Size) {
 		e := wine.Size + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
@@ -193,12 +214,12 @@ func checkWine(wine Wine) (string, error) {
 		e := "YEAR of wine must be an integer. Check line " + wine.ID
 		return "production_year", errors.New(e)
 	}
-	if  productionYear > currentYear {
+	if productionYear > currentYear {
 		e := "YEAR of wine cannot be set in the future. Check line " + wine.ID
 		return "production_year", errors.New(e)
-	} 
+	}
 
-	v, err := strconv.ParseFloat(wine.Price,10)
+	v, err := strconv.ParseFloat(wine.Price, 10)
 	if err != nil {
 		e := wine.Price + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
 		return "price", errors.New(e)
@@ -211,10 +232,12 @@ func checkWine(wine Wine) (string, error) {
 	log.Printf("SUCCESSFUL parameter checking: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	return "", nil
 }
+
 // Insert wine in database, checking insertion in other catalogs
-func insertWine(wine Wine) {
+func insertWine(wine Wine) error {
 	// IF ALREADY IN DB, UPDATE WITH INPUT VALUES
 	// CHECK IF IT SATISFIES REQUIREMENTS FOR SOME CATALOG
+	return nil
 }
 
 //////////////////////////////////////////////////////////
@@ -223,7 +246,7 @@ func insertWine(wine Wine) {
 //
 //////////////////////////////////////////////////////////
 func updateWine(w http.ResponseWriter, r *http.Request) {
-	err, wines := readWine(r)
+	wines, err := readWine(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
