@@ -1,6 +1,7 @@
 package purchase
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"time"
 )
+
+var DB *sql.DB
 
 // Multiplexer for handling /purchase requests
 func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +175,10 @@ func checkPurchase(purchase Purchase) (string, error) {
 	price, err := strconv.ParseFloat(purchase.Cost, 10)
 	if err != nil {
 		e := purchase.Cost + " is not an accepted PRICE for wine (Must have . as decimal separator)."
+		return "cost", errors.New(e)
+	}
+	if price <= 0 {
+		e := purchase.Cost + " is not an accepted PRICE for wine (Must be positive)."
 		return "cost", errors.New(e)
 	}
 

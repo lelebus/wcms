@@ -13,6 +13,7 @@ import (
 
 var DB *sql.DB
 
+// Multiplexer for handling /catalog requests
 func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
@@ -29,7 +30,8 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 		getCatalog(w, r)
 	case "POST":
 		createCatalog(w, r)
-	// case "PATCH": updateWine(w, r)
+	case "PATCH":
+		updateCatalog(w, r)
 	case "DELETE":
 		deleteCatalog(w, r)
 	}
@@ -41,6 +43,7 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getCatalog(w http.ResponseWriter, r *http.Request) {
+
 	selection := r.URL.Path[len("/wine/"):]
 
 	var query string
@@ -198,7 +201,7 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 //
 // Handle DELETE method for catalog deletion
 //
-//////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
 func deleteCatalog(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len("/catalog/"):]
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	catalog "WCMS/src/catalog"
+	purchase "WCMS/src/purchase"
 	wine "WCMS/src/wine"
 	"database/sql"
 	"io"
@@ -33,6 +34,7 @@ func init() {
 		}
 
 		wine.DB = db
+		purchase.DB = db
 		catalog.DB = db
 	*/
 
@@ -41,6 +43,7 @@ func init() {
 
 func main() {
 	http.HandleFunc("/wine/", wine.WineHandler)
+	http.HandleFunc("/purchase/", purchase.PurchaseHandler)
 	http.HandleFunc("/catalog/parameters", catalog.GetAllParameters)
 	http.HandleFunc("/catalog/", catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
