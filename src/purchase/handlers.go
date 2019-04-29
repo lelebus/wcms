@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // Multiplexer for handling /purchase requests
@@ -93,4 +95,84 @@ func queryPurchase(id string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+//////////////////////////////////////////////////////////
+//
+// Handle POST method for purchase creation
+//
+//////////////////////////////////////////////////////////
+func createPurchase(w http.ResponseWriter, r *http.Request) {
+	purchase, err := readPurchase(r)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+	}
+
+	idError, err := checkPurchase(purchase)
+	if err != nil {
+		var body = `{ "id":"` + idError + `", "message":"` + err.Error() + `" }`
+		http.Error(w, body, 422)
+		log.Println("ERROR in parameter checking: " + err.Error())
+		return
+	}
+
+	// INSERT PURCHASE QUERY
+
+	w.WriteHeader(http.StatusOK)
+	log.Printf("SUCCESSFUL import of purchase for \"%v\" on %v", purchase.Wine, purchase.Date)
+}
+
+func readPurchase(r *http.Request) (Purchase, error) {
+	var purchase Purchase
+
+	decoder := json.NewDecoder(r.Body)
+
+	// read open bracket
+	_, err := decoder.Token()
+	if err != nil {
+		return purchase, err
+	}
+
+	for decoder.More() {
+		// decode line
+		err := decoder.Decode(&purchase)
+		if err != nil {
+			return purchase, err
+		}
+
+		log.Printf("SUCCESSFUL reading from import JSON: purchase for \"%v\" on %v \n", purchase.Wine, purchase.Date)
+	}
+
+	// read closing bracket
+	_, err = decoder.Token()
+	if err != nil {
+		return purchase, err
+	}
+
+	return purchase, nil
+}
+
+func checkPurchase(purchase Purchase) (string, error) {
+	// Date, Quantity, Cost
+	dt := time.Now()
+	today := dt.Format("02-01-2006")
+
+	if today < purchase.Date {
+		e := "DATE of purchase cannot be set in the future."
+		return "date", errors.New(e)
+	}
+
+	if purchase.Quantity <= 0 {
+		e := "QUANTITY of purchase must be and integer."
+		return "quantity", errors.New(e)
+	}
+
+	price, err := strconv.ParseFloat(purchase.Cost, 10)
+	if err != nil {
+		e := purchase.Cost + " is not an accepted PRICE for wine (Must have . as decimal separator)."
+		return "cost", errors.New(e)
+	}
+
+	return "", nil
 }
