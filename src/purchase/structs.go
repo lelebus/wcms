@@ -1,7 +1,8 @@
 package purchase
 
 type Purchase struct {
-	Wine     int    `json:"id"`
+	ID       int    `json:"id"`
+	Wine     int    `json:"wine"`
 	Date     string `json:"date"`
 	Supplier string `json:"supplier"`
 	Quantity int    `json:"quantity"`

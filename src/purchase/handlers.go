@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func queryPurchase(id string) ([]byte, error) {
 	var purchases []Purchase
 
 	// MOCK UP
-	one := Purchase{1, "13/12/1998", "La Tassa", 3, "300.00"}
+	one := Purchase{1, 1, "13/12/1998", "La Tassa", 3, "300.00"}
 	purchases = []Purchase{one}
 	// END
 
@@ -175,4 +176,20 @@ func checkPurchase(purchase Purchase) (string, error) {
 	}
 
 	return "", nil
+}
+
+//////////////////////////////////////////////////////////
+//
+// Handle DELETE method for purchase deletion
+//
+////////////////////////////////////////////////////////
+func deletePurchase(w http.ResponseWriter, r *http.Request) {
+	selection := r.URL.Path[len("/purchase/"):]
+	ids := strings.Split(selection, "-")
+
+	// DELETE query
+	// DELETE FROM WINE
+
+	w.WriteHeader(http.StatusOK)
+	log.Printf("SUCCESSFUL delete ID: %v for Wine: \n", ids[0], ids[1])
 }
