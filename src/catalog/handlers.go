@@ -27,7 +27,8 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		getCatalog(w, r)
-	// case "POST": createWine(w, r)
+	case "POST":
+		createCatalog(w, r)
 	// case "PATCH": updateWine(w, r)
 	case "DELETE":
 		deleteCatalog(w, r)
@@ -138,7 +139,7 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	// GET ALL WINES MATCHING CATALOG PARAMETERS
+	// GET ALL WINES MATCHING CATALOG PARAMETERS QUERY
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL import: \"%v\"", catalog.Name)
@@ -156,7 +157,6 @@ func readCatalog(r *http.Request) (Catalog, error) {
 	}
 
 	for decoder.More() {
-		var catalog Catalog
 		// decode line
 		err := decoder.Decode(&catalog)
 		if err != nil {
@@ -181,16 +181,14 @@ func readCatalog(r *http.Request) (Catalog, error) {
 //
 //////////////////////////////////////////////////////////
 func updateCatalog(w http.ResponseWriter, r *http.Request) {
-	catalogs, err := readCatalog(r)
+	catalog, err := readCatalog(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
-	catalog := catalogs[0]
 
 	// UPDATE query
-	// UPDATE IN WINES
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL update: \"%v\" \n", catalog.Name)

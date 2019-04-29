@@ -16,6 +16,9 @@ var DB *sql.DB
 
 // Multiplexer for handling /wine requests
 func WineHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
+
 	// check correctness of request
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "", 415)
@@ -76,7 +79,7 @@ func queryWine(all bool, query string) ([]byte, error) {
 	// MOCK UP
 	var wines []Wine
 	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "France", "500", "Stellar Wines", "Recently Disgorged", ""}
-	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Italia", "90", "", "Macerazione uve", "Alfa Beta Gamma e tu Mamma"}
+	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma"}
 	if all {
 		wines = []Wine{one, two}
 	} else {
@@ -255,6 +258,7 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 	wine := wines[0]
 
 	// UPDATE query
+	// UPDATE IN CATALOGS
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL update: \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
@@ -269,6 +273,7 @@ func deleteWine(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len("/wine/"):]
 
 	// DELETE query
+	// DELETE FROM CATALOG
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL delete ID: %v \n", selection)

@@ -6,7 +6,7 @@ import (
 )
 
 // Get all parameter necessary for automatic Catalog creation
-func GetAllParameter(w http.ResponseWriter, r *http.Request) {
+func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v", r.URL.Path, r.Method)
 

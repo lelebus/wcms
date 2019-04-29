@@ -41,6 +41,7 @@ func init() {
 
 func main() {
 	http.HandleFunc("/wine/", wine.WineHandler)
+	http.HandleFunc("/catalog/parameters", catalog.GetAllParameters)
 	http.HandleFunc("/catalog/", catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
 	http.ListenAndServe(":8080", nil)
