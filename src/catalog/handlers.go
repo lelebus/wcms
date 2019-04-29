@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	// server "WCMS/src/main"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -8,9 +9,14 @@ import (
 	"net/http"
 )
 
+// i = server.DB
+
 var DB *sql.DB
 
 func CatalogHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
+
 	// check correctness of request
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "", 415)
@@ -21,9 +27,10 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		getCatalog(w, r)
-		// case "POST": createWine(w, r)
-		// case "PATCH": updateWine(w, r)
-		// case "DELETE": deleteWine(w, r)
+	// case "POST": createWine(w, r)
+	// case "PATCH": updateWine(w, r)
+	case "DELETE":
+		deleteCatalog(w, r)
 	}
 }
 
@@ -63,9 +70,9 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 	selection := query[len(query)-1:]
 
 	var catalogs []Catalog
-	one := Catalog{"Stellar Wines", 0, "", []string{"sparkling"}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"1"}}
-	two := Catalog{"Vini Italiani", 0, "", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
-	three := Catalog{"Vini Italiani / Friuli Venezia Giulia", 1, "Vini Italiani", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
+	one := Catalog{1, "Stellar Wines", 0, "", []string{"sparkling"}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"1"}}
+	two := Catalog{2, "Vini Italiani", 0, "", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
+	three := Catalog{3, "Vini Italiani / Friuli Venezia Giulia", 1, "Vini Italiani", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
 	switch selection {
 	case "1":
 		catalogs = []Catalog{one}
@@ -124,6 +131,70 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 // Handle POST method for catalog creation
 //
 //////////////////////////////////////////////////////////
+func createCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog, err := readCatalog(r)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+	}
+
+	// GET ALL WINES MATCHING CATALOG PARAMETERS
+
+	w.WriteHeader(http.StatusOK)
+	log.Printf("SUCCESSFUL import: \"%v\"", catalog.Name)
+}
+
+func readCatalog(r *http.Request) (Catalog, error) {
+	var catalog Catalog
+
+	decoder := json.NewDecoder(r.Body)
+
+	// read open bracket
+	_, err := decoder.Token()
+	if err != nil {
+		return catalog, err
+	}
+
+	for decoder.More() {
+		var catalog Catalog
+		// decode line
+		err := decoder.Decode(&catalog)
+		if err != nil {
+			return catalog, err
+		}
+
+		log.Printf("SUCCESSFUL reading from import JSON:  \"%v\" \n", catalog.Name)
+	}
+
+	// read closing bracket
+	_, err = decoder.Token()
+	if err != nil {
+		return catalog, err
+	}
+
+	return catalog, nil
+}
+
+//////////////////////////////////////////////////////////
+//
+// Handle PATCH method for catalog update
+//
+//////////////////////////////////////////////////////////
+func updateCatalog(w http.ResponseWriter, r *http.Request) {
+	catalogs, err := readCatalog(r)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	catalog := catalogs[0]
+
+	// UPDATE query
+	// UPDATE IN WINES
+
+	w.WriteHeader(http.StatusOK)
+	log.Printf("SUCCESSFUL update: \"%v\" \n", catalog.Name)
+}
 
 //////////////////////////////////////////////////////////
 //

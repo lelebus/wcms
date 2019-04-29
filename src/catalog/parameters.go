@@ -5,12 +5,13 @@ import (
 	"net/http"
 )
 
+// Get all parameter necessary for automatic Catalog creation
 func GetAllParameter(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v", r.URL.Path, r.Method)
 
 	if r.Method != "GET" {
-		http.Error(w, "405", http.StatusMethodNotAllowed())
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
 		log.Println("ERROR in request for \"catalog/parameters/\". Just GET method is allowed")
 		return
 	}
