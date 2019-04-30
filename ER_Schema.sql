@@ -30,7 +30,7 @@ CREATE TABLE territory (
   region text NOT NULL PRIMARY KEY,
   nation text NOT NULL PRIMARY KEY,
   FOREIGN KEY (name, region, nation) REFERENCES wine(territory, region, nation) ON DELETE RESTRICT
-
+);
 
 CREATE TABLE catalog (
   name text NOT NULL PRIMARY KEY,
