@@ -1,22 +1,21 @@
 CREATE TABLE wine (
-  id integer NOT NULL PRIMARY KEY,
-  type text NOT NULL CHECK(wineType = 'red' OR wineType = 'white' OR wineType = 'sparkling'),
-  storage ???,
-  name text,
-  year integer NOT NULL CHECK(year > 1899 AND year < currentYear),
-  winery text,
-  size float NOT NULL CHECK(size = 0.375 OR size = 0.75 OR size = 1 OR size = 1.5 OR size = 3
-							OR size = 4.5 OR size = 6 OR size = 8 OR size = 9 OR size = 12  
-							OR size = 15 OR size = 17 OR size = 20 OR size = 30),
-  details ???,
+  id integer NOT NULL PRIMARY KEY SERIAL UNIQUE,
+  type text NOT NULL,
+  storage text NOT NULL,
+  name text NOT NULL,
+  year integer NOT NULL,
+  winery text NOT NULL,
+  size float NOT NULL,
+  details text,
+  territory text,
   region text,
-  country varchar(3),
-  price money NOT NULL CHECK(price > 0),
-  catalog text,
-  isActive ???,
-  FOREIGN KEY (winery) REFERENCES wine(name) ON DELETE RESTRICT,
-  FOREIGN KEY (region, nation) REFERENCES territory(region, nation) ON DELETE RESTRICT,
-  FOREIGN KEY (catalog) REFERENCES catalog(name) ON DELETE RESTRICT
+  country text NOT NULL,
+  price money NOT NULL,
+  catalog text PRIMARY KEY,
+  isActive boolean,
+  FOREIGN KEY (winery) REFERENCES winery(name) ON DELETE RESTRICT,
+  FOREIGN KEY (territoy, region, nation) REFERENCES territory(name, region, nation) ON DELETE RESTRICT,
+  FOREIGN KEY (catalog) REFERENCES catalog(id) ON DELETE RESTRICT
 );
 
 
@@ -27,9 +26,10 @@ CREATE TABLE winery (
 
 
 CREATE TABLE territory (
+  name text NOT NULL PRIMARY KEY,
   region text NOT NULL PRIMARY KEY,
   nation text NOT NULL PRIMARY KEY,
-  FOREIGN KEY (region, nation) REFERENCES wine( region, nation) ON DELETE RESTRICT
+  FOREIGN KEY (name, region, nation) REFERENCES wine(territory, region, nation) ON DELETE RESTRICT
 
 
 CREATE TABLE catalog (
