@@ -13,6 +13,9 @@ import (
 
 var DB *sql.DB
 
+// URLPath for this API
+var URLPath = "/purchases/"
+
 // Multiplexer for handling /purchase requests
 func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -37,7 +40,7 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getPurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/purchase/"):]
+	selection := r.URL.Path[len(URLPath)):]
 
 	body, err := queryPurchase(selection)
 	if err != nil {
@@ -192,7 +195,7 @@ func checkPurchase(purchase Purchase) (string, error) {
 //
 ////////////////////////////////////////////////////////
 func deletePurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/purchase/"):]
+	selection := r.URL.Path[len(URLPath):]
 	ids := strings.Split(selection, "-")
 
 	// DELETE query

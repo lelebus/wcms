@@ -23,6 +23,8 @@ func init() {
 	wrt := io.MultiWriter(os.Stdout, logfile)
 	log.SetOutput(wrt)
 
+	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
+
 	/*
 		// connect to database
 		db, err = sql.Open("postgres", "postgres://project:password@localhost/db_project?sslmode=disable")
@@ -44,10 +46,10 @@ func init() {
 func main() {
 	log.Printf("Starting server at port %v \n", port)
 
-	http.HandleFunc("/wine/", wine.WineHandler)
-	http.HandleFunc("/purchase/", purchase.PurchaseHandler)
-	http.HandleFunc("/catalog/parameter", catalog.GetAllParameters)
-	http.HandleFunc("/catalog/", catalog.CatalogHandler)
+	http.HandleFunc(wine.URLPath, wine.WineHandler)
+	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
+	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
+	http.HandleFunc(catalog.URLPath), catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
 	http.ListenAndServe(":8080", nil)
 }

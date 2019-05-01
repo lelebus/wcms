@@ -13,6 +13,9 @@ import (
 
 var DB *sql.DB
 
+// URLPath for this API
+var URLPath = "/catalogs/"
+
 // Multiplexer for handling /catalog requests
 func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -44,7 +47,7 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 //////////////////////////////////////////////////////////
 func getCatalog(w http.ResponseWriter, r *http.Request) {
 
-	selection := r.URL.Path[len("/wine/"):]
+	selection := r.URL.Path[len(URLPath):]
 
 	var query string
 	var err error
@@ -219,7 +222,7 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 //
 ////////////////////////////////////////////////////////
 func deleteCatalog(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/catalog/"):]
+	selection := r.URL.Path[len(URLPath):]
 
 	// DELETE query
 	// DELETE FROM WINE

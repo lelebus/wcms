@@ -15,7 +15,7 @@ import (
 var DB *sql.DB
 
 // URLPath for this API
-var URLPath string
+var URLPath = "/wines/"
 
 // Multiplexer for handling /wine requests
 func WineHandler(w http.ResponseWriter, r *http.Request) {

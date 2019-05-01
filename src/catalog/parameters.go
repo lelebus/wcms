@@ -5,6 +5,9 @@ import (
 	"net/http"
 )
 
+// URLPath for this API
+var ParameterPath = URLPath + "parameters"
+
 // Get all parameter necessary for automatic Catalog creation
 func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 
