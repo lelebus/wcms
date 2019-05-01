@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,17 +15,12 @@ import (
 // DB Connection
 var DB *sql.DB
 
+// URLPath for this API
+var URLPath = "/wines/"
+
 // Multiplexer for handling /wine requests
 func WineHandler(w http.ResponseWriter, r *http.Request) {
-
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
-
-	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "", 415)
-		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
-		return
-	}
 
 	switch r.Method {
 	case "GET":
@@ -50,7 +46,7 @@ func writeError(id string, message string, w http.ResponseWriter) {
 //
 //////////////////////////////////////////////////////////
 func getWine(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/wine/"):]
+	selection := r.URL.Path[len(URLPath):]
 
 	var query = `SELECT ID, area, type, size, name, winery, year, region, country, price, catalog, details, internalnotes FROM wine `
 	var err error
@@ -78,12 +74,17 @@ func queryWine(all bool, query string) ([]byte, error) {
 
 	// MOCK UP
 	var wines []Wine
-	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "France", "500", "Stellar Wines", "Recently Disgorged", ""}
-	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma"}
+	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "", "France", "500", "Stellar Wines", "Recently Disgorged", "", true}
+	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Friuli - Venezia - Giulia", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma", true}
 	if all {
 		wines = []Wine{one, two}
 	} else {
-		wines = []Wine{one}
+		id := query[(len(query) - 1):]
+		if id == "1" {
+			wines = []Wine{one}
+		} else {
+			wines = []Wine{two}
+		}
 	}
 	// END
 
@@ -134,77 +135,85 @@ func queryWine(all bool, query string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createWine(w http.ResponseWriter, r *http.Request) {
-
-	wines, err := readWine(r)
+	wines, err := checkWineRequest(w, r)
 	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
 
-	for _, wine := range wines {
-		idError, err := checkWine(wine)
-		if err != nil {
-			writeError(idError, err.Error(), w)
-			log.Println("ERROR in parameter checking: " + err.Error())
-			return
-		}
-	}
+	log.Println("check wine OK")
 
 	for _, wine := range wines {
-		err := insertWine(wine)
+		err := insertWineInDB(wine)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+			log.Println(err)
 		}
 
-		w.WriteHeader(http.StatusOK)
 		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, http.StatusText(415), 415)
+		e := `ERROR in request-header "Content-Type" field: just "application/json" is accepted`
+		return nil, errors.New(e)
+	}
+
+	wines, err := readWineToJSON(r)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return nil, err
+	}
+
+	for _, wine := range wines {
+		idError, err := checkWineParameter(wine)
+		if err != nil {
+			writeError(idError, err.Error(), w)
+			e := "ERROR in parameter checking: " + err.Error()
+			return nil, errors.New(e)
+		}
+	}
+
+	return wines, nil
 }
 
 // Create array of Wine from json array given as input
-func readWine(r *http.Request) ([]Wine, error) {
+func readWineToJSON(r *http.Request) ([]Wine, error) {
 	var wines []Wine
 
-	decoder := json.NewDecoder(r.Body)
-
-	// read open bracket
-	_, err := decoder.Token()
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return nil, err
+		e := "ERROR in reading input JSON: " + err.Error()
+		return nil, errors.New(e)
 	}
 
-	for decoder.More() {
-		var wine Wine
-		// decode line
-		err := decoder.Decode(&wine)
-		if err != nil {
-			return nil, err
-		}
+	log.Println(string(body))
 
-		wines = append(wines, wine)
-		log.Printf("SUCCESSFUL reading from import JSON:  \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
-	}
-
-	// read closing bracket
-	_, err = decoder.Token()
+	err = json.Unmarshal(body, &wines)
 	if err != nil {
-		return nil, err
+		e := "ERROR in unmarshalling JSON body: " + err.Error()
+		return nil, errors.New(e)
 	}
 
 	return wines, nil
 }
 
 // Check that all parameters of a wine are accepted
-func checkWine(wine Wine) (string, error) {
+func checkWineParameter(wine Wine) (string, error) {
 
 	if !contains(WineType, strings.ToLower(wine.Type)) {
-		e := wine.Type + " is not an accepted TYPE for wine. Check line " + wine.ID
+		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine. Check line " + wine.ID
 		return "type", errors.New(e)
 	}
 
 	if !contains(WineSize, wine.Size) {
-		e := wine.Size + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
 		return "size", errors.New(e)
 	}
 
@@ -224,11 +233,11 @@ func checkWine(wine Wine) (string, error) {
 
 	v, err := strconv.ParseFloat(wine.Price, 10)
 	if err != nil {
-		e := wine.Price + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
 		return "price", errors.New(e)
 	}
 	if v < 0 {
-		err := wine.Price + " is not an accepted PRICE for wine (Must be positive). Check line " + wine.ID
+		err := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive). Check line " + wine.ID
 		return "price", errors.New(err)
 	}
 
@@ -237,9 +246,14 @@ func checkWine(wine Wine) (string, error) {
 }
 
 // Insert wine in database, checking insertion in other catalogs
-func insertWine(wine Wine) error {
-	// IF ALREADY IN DB, UPDATE WITH INPUT VALUES
+func insertWineInDB(wine Wine) error {
 	// CHECK IF IT SATISFIES REQUIREMENTS FOR SOME CATALOG
+	// INSERT CATALOGS INTO WINE
+	// INSERT WINE INTO CATALOGS
+
+	// e := "ERROR in inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
+	// return errors.New(e)
+
 	return nil
 }
 
@@ -249,19 +263,37 @@ func insertWine(wine Wine) error {
 //
 //////////////////////////////////////////////////////////
 func updateWine(w http.ResponseWriter, r *http.Request) {
-	wines, err := readWine(r)
+	wines, err := checkWineRequest(w, r)
 	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
-	wine := wines[0]
 
-	// UPDATE query
-	// UPDATE IN CATALOGS
+	for _, wine := range wines {
+		err := updateWineDB(wine)
+		if err != nil {
+			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+			log.Printf("ABORTED process for \"%v\" update", wine.Name)
+		}
+
+		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
+	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL update: \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
+}
+
+func updateWineDB(wine Wine) error {
+	err := deleteWineFromDB(wine.ID)
+	if err != nil {
+		return err
+	}
+
+	err = insertWineInDB(wine)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //////////////////////////////////////////////////////////
@@ -270,11 +302,25 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func deleteWine(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/wine/"):]
+	selection := r.URL.Path[len(URLPath):]
 
-	// DELETE query
-	// DELETE FROM CATALOG
+	err := deleteWineFromDB(selection)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL delete ID: %v \n", selection)
+}
+
+func deleteWineFromDB(id string) error {
+	// DELETE query
+	// DELETE FROM CATALOG
+
+	// e:= "ERROR in ERROR in deleting Wine \""" + wine.Name + "\" from DB: " + err.Error()"
+	// return errors.New(e)
+
+	return nil
 }

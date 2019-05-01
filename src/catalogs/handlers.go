@@ -13,23 +13,20 @@ import (
 
 var DB *sql.DB
 
+// URLPath for this API
+var URLPath = "/catalogs/"
+
+// Multiplexer for handling /catalog requests
 func CatalogHandler(w http.ResponseWriter, r *http.Request) {
-
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
-
-	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "", 415)
-		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
-		return
-	}
 
 	switch r.Method {
 	case "GET":
 		getCatalog(w, r)
 	case "POST":
 		createCatalog(w, r)
-	// case "PATCH": updateWine(w, r)
+	case "PATCH":
+		updateCatalog(w, r)
 	case "DELETE":
 		deleteCatalog(w, r)
 	}
@@ -41,7 +38,8 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getCatalog(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/wine/"):]
+
+	selection := r.URL.Path[len(URLPath):]
 
 	var query string
 	var err error
@@ -51,8 +49,8 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 		query = `SELECT name, level FROM catalog` //QUERY ALL CATALOGS
 		body, err = queryCatalog(true, query)
 	} else {
-		body, err = queryCatalog(false, query)
 		query = `SELECT * WHERE name = ` + selection //QUERY SELECTION
+		body, err = queryCatalog(false, query)
 	}
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -68,21 +66,24 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 func queryCatalog(all bool, query string) ([]byte, error) {
 
 	// MOCK UP
-	selection := query[len(query)-1:]
-
 	var catalogs []Catalog
+
 	one := Catalog{1, "Stellar Wines", 0, "", []string{"sparkling"}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"1"}}
 	two := Catalog{2, "Vini Italiani", 0, "", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
 	three := Catalog{3, "Vini Italiani / Friuli Venezia Giulia", 1, "Vini Italiani", []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{}, []string{"2"}}
-	switch selection {
-	case "1":
-		catalogs = []Catalog{one}
-	case "2":
-		catalogs = []Catalog{two}
-	case "3":
-		catalogs = []Catalog{three}
-	default:
+	if all {
 		catalogs = []Catalog{one, two, three}
+	} else {
+		selection := query[(len(query) - 1):]
+
+		switch selection {
+		case "1":
+			catalogs = []Catalog{one}
+		case "2":
+			catalogs = []Catalog{two}
+		case "3":
+			catalogs = []Catalog{three}
+		}
 	}
 	// END
 
@@ -133,6 +134,14 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createCatalog(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	catalog, err := readCatalog(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -181,6 +190,14 @@ func readCatalog(r *http.Request) (Catalog, error) {
 //
 //////////////////////////////////////////////////////////
 func updateCatalog(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	catalog, err := readCatalog(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -188,7 +205,7 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// UPDATE query
+	// UPDATE name query
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL update: \"%v\" \n", catalog.Name)
@@ -198,9 +215,9 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 //
 // Handle DELETE method for catalog deletion
 //
-//////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
 func deleteCatalog(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/catalog/"):]
+	selection := r.URL.Path[len(URLPath):]
 
 	// DELETE query
 	// DELETE FROM WINE

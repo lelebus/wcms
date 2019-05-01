@@ -2,6 +2,7 @@ package main
 
 import (
 	catalog "WCMS/src/catalog"
+	purchase "WCMS/src/purchase"
 	wine "WCMS/src/wine"
 	"database/sql"
 	"io"
@@ -22,6 +23,8 @@ func init() {
 	wrt := io.MultiWriter(os.Stdout, logfile)
 	log.SetOutput(wrt)
 
+	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
+
 	/*
 		// connect to database
 		db, err = sql.Open("postgres", "postgres://project:password@localhost/db_project?sslmode=disable")
@@ -33,6 +36,7 @@ func init() {
 		}
 
 		wine.DB = db
+		purchase.DB = db
 		catalog.DB = db
 	*/
 
@@ -40,9 +44,12 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/wine/", wine.WineHandler)
-	http.HandleFunc("/catalog/parameters", catalog.GetAllParameters)
-	http.HandleFunc("/catalog/", catalog.CatalogHandler)
+	log.Printf("Starting server at port %v \n", port)
+
+	http.HandleFunc(wine.URLPath, wine.WineHandler)
+	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
+	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
+	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
 	http.ListenAndServe(":8080", nil)
 }

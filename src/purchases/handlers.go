@@ -1,6 +1,7 @@
 package purchase
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -10,17 +11,15 @@ import (
 	"time"
 )
 
+var DB *sql.DB
+
+// URLPath for this API
+var URLPath = "/purchases/"
+
 // Multiplexer for handling /purchase requests
 func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
-
-	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "", 415)
-		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
-		return
-	}
 
 	switch r.Method {
 	case "GET":
@@ -41,7 +40,7 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getPurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/purchase/"):]
+	selection := r.URL.Path[len(URLPath):]
 
 	body, err := queryPurchase(selection)
 	if err != nil {
@@ -104,6 +103,14 @@ func queryPurchase(id string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createPurchase(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	purchase, err := readPurchase(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -174,6 +181,10 @@ func checkPurchase(purchase Purchase) (string, error) {
 		e := purchase.Cost + " is not an accepted PRICE for wine (Must have . as decimal separator)."
 		return "cost", errors.New(e)
 	}
+	if price <= 0 {
+		e := purchase.Cost + " is not an accepted PRICE for wine (Must be positive)."
+		return "cost", errors.New(e)
+	}
 
 	return "", nil
 }
@@ -184,7 +195,7 @@ func checkPurchase(purchase Purchase) (string, error) {
 //
 ////////////////////////////////////////////////////////
 func deletePurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len("/purchase/"):]
+	selection := r.URL.Path[len(URLPath):]
 	ids := strings.Split(selection, "-")
 
 	// DELETE query
