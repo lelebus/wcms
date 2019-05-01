@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -140,6 +141,8 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("check wine OK")
+
 	for _, wine := range wines {
 		err := insertWineInDB(wine)
 		if err != nil {
@@ -184,30 +187,18 @@ func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 func readWineToJSON(r *http.Request) ([]Wine, error) {
 	var wines []Wine
 
-	decoder := json.NewDecoder(r.Body)
-
-	// read open bracket
-	_, err := decoder.Token()
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return nil, err
+		e := "ERROR in reading input JSON: " + err.Error()
+		return nil, errors.New(e)
 	}
 
-	for decoder.More() {
-		var wine Wine
-		// decode line
-		err := decoder.Decode(&wine)
-		if err != nil {
-			return nil, err
-		}
+	log.Println(string(body))
 
-		wines = append(wines, wine)
-		log.Printf("SUCCESSFUL reading from import JSON:  \"%v BY %v - %v\" \n", wine.Name, wine.Winery, wine.Year)
-	}
-
-	// read closing bracket
-	_, err = decoder.Token()
+	err = json.Unmarshal(body, &wines)
 	if err != nil {
-		return nil, err
+		e := "ERROR in unmarshalling JSON body: " + err.Error()
+		return nil, errors.New(e)
 	}
 
 	return wines, nil
@@ -217,12 +208,12 @@ func readWineToJSON(r *http.Request) ([]Wine, error) {
 func checkWineParameter(wine Wine) (string, error) {
 
 	if !contains(WineType, strings.ToLower(wine.Type)) {
-		e := wine.Type + " is not an accepted TYPE for wine. Check line " + wine.ID
+		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine. Check line " + wine.ID
 		return "type", errors.New(e)
 	}
 
 	if !contains(WineSize, wine.Size) {
-		e := wine.Size + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
 		return "size", errors.New(e)
 	}
 
@@ -242,11 +233,11 @@ func checkWineParameter(wine Wine) (string, error) {
 
 	v, err := strconv.ParseFloat(wine.Price, 10)
 	if err != nil {
-		e := wine.Price + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
 		return "price", errors.New(e)
 	}
 	if v < 0 {
-		err := wine.Price + " is not an accepted PRICE for wine (Must be positive). Check line " + wine.ID
+		err := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive). Check line " + wine.ID
 		return "price", errors.New(err)
 	}
 

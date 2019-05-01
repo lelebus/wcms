@@ -40,7 +40,7 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getPurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len(URLPath)):]
+	selection := r.URL.Path[len(URLPath):]
 
 	body, err := queryPurchase(selection)
 	if err != nil {
