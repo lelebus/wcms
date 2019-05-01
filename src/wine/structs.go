@@ -8,12 +8,14 @@ type Wine struct {
 	Name          string `json:"name"`
 	Winery        string `json:"winery"`
 	Year          string `json:"year"`
+	Territory     string `json:"territory"`
 	Region        string `json:"region"`
 	Country       string `json:"country"`
 	Price         string `json:"price"`
 	Catalog       string `json:"catalog"`
 	Details       string `json:"details"`
 	InternalNotes string `json:"internal-notes"`
+	IsActive      bool   `json:"is-active"`
 }
 
 // Chiedi a Babbo!!

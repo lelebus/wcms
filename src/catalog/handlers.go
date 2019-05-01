@@ -136,6 +136,14 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createCatalog(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	catalog, err := readCatalog(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -184,6 +192,14 @@ func readCatalog(r *http.Request) (Catalog, error) {
 //
 //////////////////////////////////////////////////////////
 func updateCatalog(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	catalog, err := readCatalog(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)

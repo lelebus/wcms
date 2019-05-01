@@ -19,13 +19,6 @@ func WineHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
 
-	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "", 415)
-		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
-		return
-	}
-
 	switch r.Method {
 	case "GET":
 		getWine(w, r)
@@ -78,8 +71,8 @@ func queryWine(all bool, query string) ([]byte, error) {
 
 	// MOCK UP
 	var wines []Wine
-	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "France", "500", "Stellar Wines", "Recently Disgorged", ""}
-	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma"}
+	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "", "France", "500", "Stellar Wines", "Recently Disgorged", "", true}
+	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Friuli - Venezia - Giulia", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma", true}
 	if all {
 		wines = []Wine{one, two}
 	} else {
@@ -134,6 +127,13 @@ func queryWine(all bool, query string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createWine(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
 
 	wines, err := readWine(r)
 	if err != nil {
@@ -249,6 +249,14 @@ func insertWine(wine Wine) error {
 //
 //////////////////////////////////////////////////////////
 func updateWine(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	wines, err := readWine(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)

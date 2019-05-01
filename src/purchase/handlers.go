@@ -18,13 +18,6 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("REQUEST Path: %v - Method: %v \n", r.URL.Path, r.Method)
 
-	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "", 415)
-		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
-		return
-	}
-
 	switch r.Method {
 	case "GET":
 		getPurchase(w, r)
@@ -107,6 +100,14 @@ func queryPurchase(id string) ([]byte, error) {
 //
 //////////////////////////////////////////////////////////
 func createPurchase(w http.ResponseWriter, r *http.Request) {
+
+	// check correctness of request
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "", 415)
+		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
+		return
+	}
+
 	purchase, err := readPurchase(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
