@@ -1,0 +1,29 @@
+
+ 1) Get ID, Name, Level of all catalogs
+    SELECT id, name, level FROM catalog
+
+ 2) Get all parameters of a catalog by ID
+    SELECT * FROM catalog WHERE id = $1
+
+ 3) Get all wines matching a catalog's parameters
+ 4) Insert catalog
+        with array of wine IDs retrieved in 3
+ 5) Insert wine
+        with IDs retrieved in 3 and new catalog
+ 6) Update name of a catalog by ID
+ 7) Delete catalog by ID and its references inside wine
+ 8) Get all parameters of all wines.
+        catalogs are stored in an array for each wine
+ 9) Get all parameters of a wine by ID.
+        catalogs are stored in an array
+10) Get all catalogs matching a wine's parameters
+11) Insert wine
+        with array of catalog IDs retrieved in 10 + customized
+12) Insert catalog
+        with IDs retrieved in 10 + customized and new wine
+13) Delete wine by ID and its references inside catalogs
+14) Get all purchases with all parameters by wine ID
+15) Insert purchase
+
+NOTA:   le righe indentate sono solo commenti per lo sviluppo, non query da definire
+        i parametri che andranno inseriti sono specificati da un placeholder "$" seguito dall'indice del parametro (vedi Query 2)

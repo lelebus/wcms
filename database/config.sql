@@ -25,8 +25,8 @@ CREATE TABLE winery (
 );
 
 
-CREATE TABLE territory (
-  name text FOREIGN KEY,
+CREATE TABLE origin (
+  territory text FOREIGN KEY,
   region text FOREIGN KEY,
   nation text NOT NULL FOREIGN KEY,
 );

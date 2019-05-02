@@ -21,32 +21,39 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 
 	body := `{ "parameters": [`
 
-	regions, err := getRegions()
+	territories, err := getAll("territory", "origin")
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println(err)
+		log.Println("ERROR in retrieving Territories: " + err.Error())
 		return
 	}
-	countries, err := getCountries()
+	regions, err := getAll("region", "origin")
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println(err)
+		log.Println("ERROR in retrieving Regions: " + err.Error())
 		return
 	}
-	wineries, err := getWineries()
+	countries, err := getAll("country", "origin")
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println(err)
+		log.Println("ERROR in retrieving Countries: " + err.Error())
 		return
 	}
-	storage, err := getStorage()
+	wineries, err := getAll("winery", "winery")
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println(err)
+		log.Println("ERROR in retrieving Wineries: " + err.Error())
 		return
 	}
 
-	body += storage + wineries + regions + countries + `]}`
+	// MOCK UP
+	territories = arrayToJSON("territories", []string{"Champagne", "Colli Orientali del Friuli"})
+	regions = arrayToJSON("regions", []string{"Friuli Venezia Giulia"})
+	countries = arrayToJSON("countries", []string{"France", "Italy"})
+	wineries = arrayToJSON("wineries", []string{"Bollinger", "Ronco Severo"})
+	// END
+
+	body += wineries + territories + regions + countries + `]}`
 
 	w.Header().Set("Content-Type", "application-json")
 	w.WriteHeader(http.StatusOK)
@@ -64,50 +71,10 @@ func arrayToJSON(title string, array []string) string {
 	return body
 }
 
-func getRegions() (string, error) {
-	var regions []string
+func getAll(field, table string) (string, error) {
+	var fields []string
 
-	// MOCK UP
-	regions = []string{"Champagne", "Colli Orientali - Fiuli Venezia Giulia"}
-	// END
+	// SELECT " + field + " FROM " + table
 
-	// query all Regions
-
-	return arrayToJSON("regions", regions), nil
-}
-
-func getCountries() (string, error) {
-	var countries []string
-
-	// MOCK UP
-	countries = []string{"France", "Italy"}
-	// END
-
-	// query all Countries
-
-	return arrayToJSON("countries", countries), nil
-}
-
-func getWineries() (string, error) {
-	var wineries []string
-
-	// MOCK UP
-	wineries = []string{"Bollinger", "Ronco Severo"}
-	// END
-
-	// query all Wineries
-
-	return arrayToJSON("wineries", wineries), nil
-}
-
-func getStorage() (string, error) {
-	var storage []string
-
-	// MOCK UP
-	storage = []string{"X 2", "Z 14"}
-	// END
-
-	// query all Wineries
-
-	return arrayToJSON("storage", storage), nil
+	return arrayToJSON(field, fields), nil
 }
