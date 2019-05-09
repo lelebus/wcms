@@ -21,27 +21,41 @@ CREATE TABLE wine (
   region text references origin(region),
   nation text references origin(nation) NOT NULL,
   price money NOT NULL,
-  catalog text,
+  catalog []text,
   details text,
-  internal_notes text,
-  is_active boolean
+  internal-notes text,
+  is-active boolean,
+  FOREIGN KEY (winery) REFERENCES winery(name) ON DELETE RESTRICT,
+  FOREIGN KEY (territoy, region, nation) REFERENCES territory(name, region, nation) ON DELETE RESTRICT,
 );
 
+
+CREATE TABLE winery (
+  winery text NOT NULL PRIMARY KEY,
+);
+
+
+CREATE TABLE origin (
+  territory text FOREIGN KEY,
+  region text FOREIGN KEY,
+  nation text NOT NULL FOREIGN KEY,
+);
 
 CREATE TABLE catalog (
   id int PRIMARY KEY NOT NULL,
   name text NOT NULL,
-  level int NOT NULL CHECK (level >= 0 AND level <= 3),
-  parent int references catalog(id),
-  type text,
-  size float,
-  year int,
-  territory text references origin(territory),
-  region text references origin(region),
-  nation text references origin(nation),
-  winery text,
-  storage text,
-  wine int references wine(id)
+  level integer NOT NULL CHECK (level >= 0 AND level <= 3),
+  parent int FOREIGN KEY REFERENCES catalog(id)
+  type text[],
+  size float[],
+  year int[],
+  territory text[],
+  region text[],
+  country text[],
+  winery text[],
+  storage text[],
+  wine integer[],
+  FOREIGN KEY (territory, region, country) REFERENCES territory(name, region, country)
 );
 
 CREATE TABLE purchase (
