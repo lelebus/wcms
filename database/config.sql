@@ -1,32 +1,33 @@
 
+
 CREATE TABLE winery (
-  name text NOT NULL PRIMARY KEY
+  name text PRIMARY KEY
 );
 
 CREATE TABLE origin (
-  territory text UNIQUE,
-  region text UNIQUE,
-  nation text NOT NULL UNIQUE
+  territory text,
+  region text,
+  nation text NOT NULL, 
+  PRIMARY KEY (territory, region, nation)
 );
 
 CREATE TABLE wine (
-  id SERIAL PRIMARY KEY NOT NULL UNIQUE,
+  id SERIAL PRIMARY KEY UNIQUE,
   storage_area text NOT NULL,
   type text NOT NULL,
   size float NOT NULL,
   name text NOT NULL,
-  winery_cellar text NOT NULL references winery(name),
+  winery text NOT NULL references winery(name),
   year int NOT NULL,
-  territory text references origin(territory),
-  region text references origin(region),
-  nation text references origin(nation) NOT NULL,
+  territory text,
+  region text,
+  nation text NOT NULL,
   price money NOT NULL,
   catalog []text,
   details text,
-  internal-notes text,
-  is-active boolean,
-  FOREIGN KEY (winery) REFERENCES winery(name) ON DELETE RESTRICT,
-  FOREIGN KEY (territoy, region, nation) REFERENCES territory(name, region, nation) ON DELETE RESTRICT,
+  internal_notes text,
+  is_active boolean,
+  FOREIGN KEY (territory, region, nation) references origin(territory,region,nation)
 );
 
 
@@ -42,7 +43,7 @@ CREATE TABLE origin (
 );
 
 CREATE TABLE catalog (
-  id int PRIMARY KEY NOT NULL,
+  id int PRIMARY KEY,
   name text NOT NULL,
   level integer NOT NULL CHECK (level >= 0 AND level <= 3),
   parent int FOREIGN KEY REFERENCES catalog(id)
@@ -59,9 +60,9 @@ CREATE TABLE catalog (
 );
 
 CREATE TABLE purchase (
-  id int PRIMARY KEY NOT NULL,
+  id int PRIMARY KEY,
   wine int NOT NULL references wine(id),
-  date timestamp NOT NULL,
+  date timestamp NOT NULL, --'2016-06-22 19:10:25-07'
   supplier text,
   quantity int NOT NULL,
   cost money NOT NULL
