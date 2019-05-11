@@ -6,21 +6,41 @@
     SELECT * FROM catalog WHERE id = $1
 
  3) Get all wines matching a catalog's parameters
+    SELECT * FROM wine w, catalogs c WHERE c.$parametro = $1; 
+    
  4) Insert catalog
         with array of wine IDs retrieved in 3
+        
  5) Insert wine
+    INSERT INTO wine ($);
+    
  6) Update name of a catalog by ID
+ 
  7) Delete catalog by ID and its references inside wine
+    DELETE FROM catalog WHERE id=$1;
+    
  8) Get all parameters of all wines.
+    SELECT * FROM wine;
+    
  9) Get all parameters of a wine by ID.
+    SELECT * FROM wine WHERE id=1;
+    
 10) Get all catalogs matching a wine's parameters
+    
 11) Insert wine
         with array of catalog IDs retrieved in 10 + customized
+        
 12) Insert catalog
         with IDs retrieved in 10 + customized and new wine
+        
 13) Delete wine by ID and its references inside catalogs
+    DELETE FROM wine WHERE id=$1;
+    
 14) Get all purchases with all parameters by wine ID
+
 15) Insert purchase
+    INSERT INTO purchase (id,wine,date,supplier,quantity,cost) VALUES ($);
+
 16) Delete wine and its references only in non-customized catalogs
         this is when wine gets updated. Keep ID of wine before deleting!!
 
