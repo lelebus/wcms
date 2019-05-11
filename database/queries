@@ -1,5 +1,4 @@
-
- 1) Get ID, Name, Level of all catalogs
+1) Get ID, Name, Level of all catalogs
     SELECT id, name, level FROM catalog
 
  2) Get all parameters of a catalog by ID
@@ -8,13 +7,13 @@
  3) Get all wines matching a catalog's parameters
     SELECT * FROM wine w, catalogs c WHERE c.$parametro = $1; 
     
- 4) Insert catalog
-        with array of wine IDs retrieved in 3
+ 4) Insert catalog with array of wine IDs retrieved in 3
         
  5) Insert wine
-    INSERT INTO wine ($);
+    INSERT INTO wine (id,storage_area,type,size,name,winery,year,territory,region,nation,price,catalog,details,internal_notes,is_active) VALUES ($);
     
  6) Update name of a catalog by ID
+	   UPDATE catalog SET name=$1 WHERE id = $1;
  
  7) Delete catalog by ID and its references inside wine
     DELETE FROM catalog WHERE id=$1;
@@ -26,6 +25,7 @@
     SELECT * FROM wine WHERE id=1;
     
 10) Get all catalogs matching a wine's parameters
+	   SELECT * FROM catalog c, wine w WHERE w.$parameter = $1;
     
 11) Insert wine
         with array of catalog IDs retrieved in 10 + customized
@@ -37,15 +37,10 @@
     DELETE FROM wine WHERE id=$1;
     
 14) Get all purchases with all parameters by wine ID
+	   SELECT * FROM purchase p, wine w WHERE w.id = $1;
 
 15) Insert purchase
     INSERT INTO purchase (id,wine,date,supplier,quantity,cost) VALUES ($);
 
 16) Delete wine and its references only in non-customized catalogs
         this is when wine gets updated. Keep ID of wine before deleting!!
-
-NOTA:  le righe indentate sono solo commenti per lo sviluppo, non query da definire
-       i parametri che andranno inseriti sono specificati da un placeholder "$" seguito dall'indice del parametro (vedi Query 2)
-       se ti serve materiale per gli array:
-       - https://www.opsdash.com/blog/postgres-arrays-golang.html
-       - https://www.postgresql.org/docs/9.1/arrays.html
