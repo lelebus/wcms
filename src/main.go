@@ -1,9 +1,9 @@
 package main
 
 import (
-	catalog "WCMS/src/catalog"
-	purchase "WCMS/src/purchase"
-	wine "WCMS/src/wine"
+	catalog "WCMS/src/catalogs"
+	purchase "WCMS/src/purchases"
+	wine "WCMS/src/wines"
 	"database/sql"
 	"io"
 	"log"
@@ -12,6 +12,8 @@ import (
 )
 
 var db *sql.DB
+
+const port = ":8080"
 
 func init() {
 	logfile, err := os.OpenFile("wcms.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -24,7 +26,6 @@ func init() {
 	log.SetOutput(wrt)
 
 	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
-
 	/*
 		// connect to database
 		db, err = sql.Open("postgres", "postgres://project:password@localhost/db_project?sslmode=disable")
@@ -39,7 +40,6 @@ func init() {
 		purchase.DB = db
 		catalog.DB = db
 	*/
-
 	log.Println("Successfully connected to database")
 }
 
@@ -51,7 +51,7 @@ func main() {
 	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
 	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(port, nil)
 }
 
 func serveJS(w http.ResponseWriter, r *http.Request) {

@@ -1,4 +1,4 @@
-package catalog
+package catalogs
 
 import (
 	"log"

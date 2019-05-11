@@ -1,4 +1,4 @@
-package purchase
+package purchases
 
 import (
 	"database/sql"
@@ -199,7 +199,6 @@ func deletePurchase(w http.ResponseWriter, r *http.Request) {
 	ids := strings.Split(selection, "-")
 
 	// DELETE query
-	// DELETE FROM WINE
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL delete ID: %v for Wine: \n", ids[0], ids[1])

@@ -1,4 +1,4 @@
-package purchase
+package purchases
 
 type Purchase struct {
 	ID       int    `json:"id"`

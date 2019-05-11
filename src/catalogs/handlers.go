@@ -1,4 +1,4 @@
-package catalog
+package catalogs
 
 import (
 	// server "WCMS/src/main"

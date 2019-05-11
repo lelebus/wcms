@@ -1,4 +1,4 @@
-package wine
+package wines
 
 import (
 	"database/sql"

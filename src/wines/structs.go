@@ -1,4 +1,4 @@
-package wine
+package wines
 
 type Wine struct {
 	ID            string `json:"id"`
