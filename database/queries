@@ -1,46 +1,96 @@
-1) Get ID, Name, Level of all catalogs
-    SELECT id, name, level FROM catalog
+---TEST--QUERIES--------------------------------------------------------------------------------------------------------------------------------------------------------
 
- 2) Get all parameters of a catalog by ID
-    SELECT * FROM catalog WHERE id = $1
+INSERT INTO winery VALUES ('Bollinger');
 
- 3) Get all wines matching a catalog's parameters
-    SELECT * FROM wine w, catalogs c WHERE c.$parametro = $1; 
+INSERT INTO winery VALUES ('Ronco Severo');
+
+INSERT INTO origin (territory,region,country) VALUES ('Champagne','','France');
+
+INSERT INTO origin (territory,region,country) VALUES ('Colli Orientali','Friuli - Venezia - Giulia','Italia');
+
+INSERT INTO catalog (name, level, is_customized) VALUES ('Stellar Wines', 0, true);
+
+INSERT INTO catalog (name, level, type, size, year, territory, region, country, winery, is_customized) VALUES
+                     ('Vini Italiani', 0, '{}', '{}', '{}', '{}', '{}', '{"Italia"}', '{}', false);
+
+INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalog,details,internal_notes,is_active) VALUES 
+                  ('A 22', 'sparkling', 0.75, 'R.D.', 'Bollinger', 1985, 'Champagne', '', 'France', 850.00, '{1}', 'Really Rare', 'Ciao Giada', true);
+
+INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalog,details,internal_notes,is_active) VALUES 
+                  ('A 6', 'white', 0.75, 'Ribolla Gialla', 'Ronco Severo', 2010, 'Colli Orientali', 'Friuli - Venezia - Giulia', 'Italia', 100.00, '{2}', '', '', true);
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1) Get ID, Name, Level, Customized of all customizable catalogs 
+   SELECT id, name, level, is_customized FROM catalog;
+
+2) Get all parameters of a catalog by ID
+   SELECT * FROM catalog WHERE id = $1;
+
+3) Get all wines matching a catalog's parameters
+   SELECT w.id FROM wine w, catalog c WHERE c.id = $1 AND
+           c.is_customized = false AND 
+         ( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
+         ( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
+         ( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
+         ( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
+         ( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
+         ( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
+         ( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );
     
- 4) Insert catalog with array of wine IDs retrieved in 3
+4) Insert catalog with array of wine IDs retrieved in 3
+   UPDATE catalog SET wines = array_append(wines, $1);
         
- 5) Insert wine
-    INSERT INTO wine (id,storage_area,type,size,name,winery,year,territory,region,nation,price,catalog,details,internal_notes,is_active) VALUES ($);
-    
- 6) Update name of a catalog by ID
-	   UPDATE catalog SET name=$1 WHERE id = $1;
+5) Insert wine
+   INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalog,details,internal_notes,is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+
+6) Update name of a catalog by ID
+   UPDATE catalog SET name = $1 WHERE id = $2;
  
- 7) Delete catalog by ID and its references inside wine
-    DELETE FROM catalog WHERE id=$1;
+7) Delete catalog by ID and its REFERENCES inside wine
+   DELETE FROM catalog WHERE id = $1;
+   UPDATE wine SET catalogs = array_remove(catalogs, $1) WHERE id = $2;
     
- 8) Get all parameters of all wines.
-    SELECT * FROM wine;
-    
- 9) Get all parameters of a wine by ID.
-    SELECT * FROM wine WHERE id=1;
-    
-10) Get all catalogs matching a wine's parameters
-	   SELECT * FROM catalog c, wine w WHERE w.$parameter = $1;
-    
-11) Insert wine
-        with array of catalog IDs retrieved in 10 + customized
-        
-12) Insert catalog
-        with IDs retrieved in 10 + customized and new wine
-        
-13) Delete wine by ID and its references inside catalogs
-    DELETE FROM wine WHERE id=$1;
-    
-14) Get all purchases with all parameters by wine ID
-	   SELECT * FROM purchase p, wine w WHERE w.id = $1;
+8) Get all parameters of all wines.
+   SELECT * FROM wine;
 
-15) Insert purchase
-    INSERT INTO purchase (id,wine,date,supplier,quantity,cost) VALUES ($);
+9) Get all parameters of a wine by ID.
+   SELECT * FROM wine WHERE id = $1;
+    
+10)Get all catalogs matching a wine's parameters
+   SELECT c.id FROM wine w, catalog c WHERE w.id = $1 AND
+         ( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
+         ( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
+         ( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
+         ( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
+         ( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
+         ( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
+         ( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );
+        
+12)Insert catalog
+   INSERT INTO catalog (name, level, parent, type, size, year, territory, region, country, winery, is_customized)
+   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+        
+13)Delete wine by ID and its REFERENCES inside catalogs
+   DELETE FROM wine WHERE id = $1;
+   UPDATE catalog SET wines = array_remove(wines, $1) WHERE id = $2;
+    
+14)Get all purchases with all parameters by wine ID
+	SELECT p.* FROM purchase p, wine w WHERE w.id = $1;
 
-16) Delete wine and its references only in non-customized catalogs
-        this is when wine gets updated. Keep ID of wine before deleting!!
+15)Insert purchase
+   INSERT INTO purchase (id,wine,supplier,quantity,cost) 
+   VALUES ($1, $2, $3, $4, $5);
+
+16)Get customizable catalogs of an array
+   SELECT id FROM catalog WHERE ARRAY[id] <@ $1 AND is_customized = true; 
+
+
+
+BRAINSTROM:
+If column catalog in file is not null, catalog is created and set as customized.
+Not customizable catalogs must have all arrays set.
+Insert all attributes that go in other table first? (e.g. origin, winery)
+Parent for catalog must be set if level > 0
+After complete insertion of wine (i.e. also catalog[]), range catalog[] and append wine id for each catalog
