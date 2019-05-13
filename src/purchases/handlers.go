@@ -58,34 +58,33 @@ func queryPurchase(id string) ([]byte, error) {
 
 	var purchases []Purchase
 
-	// MOCK UP
-	one := Purchase{1, 1, "13/12/1998", "La Tassa", 3, "300.00"}
-	purchases = []Purchase{one}
-	// END
-
-	// WITH DATABASE
 	/*
-		//query databases
-		rows, err := DB.Query(query)
+		// MOCK UP
+		one := Purchase{1, 1, "13/12/1998", "La Tassa", 3, "300.00"}
+		purchases = []Purchase{one}
+		// END
+	*/
+
+	//get purchases by wine id
+	query := `SELECT p.id, p.date, p.supplier, p.quantity, p.cost FROM purchase p, wine w WHERE w.id = $1;`
+	rows, err := DB.Query(query, id)
+	if err != nil {
+		err = errors.New("ERROR in retrieving purchase entries from DB: " + err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	for rows.Next() {
+		purchase := Purchase{}
+		err = rows.Scan(&purchase.ID, &purchase.Date, &purchase.Supplier, &purchase.Quantity, &purchase.Cost)
 		if err != nil {
-			err = errors.New("ERROR in retrieving purchase entries from DB: " + err.Error())
+			err = errors.New("ERROR in scanning retrieved purchase entries: " + err.Error())
 			return nil, err
 		}
-		defer rows.Close()
 
-		// read retrieved lines
-		purchases := make([]Purchase, 0)
-		for rows.Next() {
-			purchase := Purchase{}
-			err = rows.Scan(&purchase.Date, &purchase.Supplier, &purchase.Quantity, &purchase.Cost)
-			if err != nil {
-				err = errors.New("ERROR in scanning retrieved purchase entries: " + err.Error())
-				return nil, err
-			}
-
-			purchases = append(purchases, purchase)
-		}
-	*/
+		purchases = append(purchases, purchase)
+	}
 
 	// marshal wines
 	body, err := json.Marshal(purchases)
@@ -125,7 +124,15 @@ func createPurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT PURCHASE QUERY
+	// insert purchase
+	query := `INSERT INTO purchase (id,wine,date,supplier,quantity,cost) VALUES ($1, $2, $3, $4, $5);`
+	_, err = DB.Exec(query, purchase.ID, purchase.Wine, purchase.Date, purchase.Supplier, purchase.Quantity, purchase.Cost)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		err = errors.New("ERROR in inserting purchase: " + err.Error())
+		log.Println(err)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL import of purchase for \"%v\" on %v", purchase.Wine, purchase.Date)
@@ -134,35 +141,35 @@ func createPurchase(w http.ResponseWriter, r *http.Request) {
 func readPurchase(r *http.Request) (Purchase, error) {
 	var purchase Purchase
 
-	decoder := json.NewDecoder(r.Body)
+	// decoder := json.NewDecoder(r.Body)
 
-	// read open bracket
-	_, err := decoder.Token()
-	if err != nil {
-		return purchase, err
-	}
+	// // read open bracket
+	// _, err := decoder.Token()
+	// if err != nil {
+	// 	return purchase, err
+	// }
 
-	for decoder.More() {
-		// decode line
-		err := decoder.Decode(&purchase)
-		if err != nil {
-			return purchase, err
-		}
+	// for decoder.More() {
+	// 	// decode line
+	// 	err := decoder.Decode(&purchase)
+	// 	if err != nil {
+	// 		return purchase, err
+	// 	}
 
-		log.Printf("SUCCESSFUL reading from import JSON: purchase for \"%v\" on %v \n", purchase.Wine, purchase.Date)
-	}
+	// 	log.Printf("SUCCESSFUL reading from import JSON: purchase for \"%v\" on %v \n", purchase.Wine, purchase.Date)
+	// }
 
-	// read closing bracket
-	_, err = decoder.Token()
-	if err != nil {
-		return purchase, err
-	}
+	// // read closing bracket
+	// _, err = decoder.Token()
+	// if err != nil {
+	// 	return purchase, err
+	// }
 
 	return purchase, nil
 }
 
 func checkPurchase(purchase Purchase) (string, error) {
-	// Date, Quantity, Cost
+
 	dt := time.Now()
 	today := dt.Format("02-01-2006")
 
@@ -198,8 +205,16 @@ func deletePurchase(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len(URLPath):]
 	ids := strings.Split(selection, "-")
 
-	// DELETE query
+	// delete purchase
+	query := `DELETE FROM purchase WHERE id = $1 AND wine = $2;`
+	_, err := DB.Exec(query, ids[0], ids[1])
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		err = errors.New("ERROR in deleting purchase: " + err.Error())
+		log.Println(err)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL delete ID: %v for Wine: \n", ids[0], ids[1])
+	log.Printf("SUCCESSFUL delete ID: %v for Wine: %v\n", ids[0], ids[1])
 }
