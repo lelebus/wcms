@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -26,20 +28,21 @@ func init() {
 	log.SetOutput(wrt)
 
 	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
-	/*
-		// connect to database
-		db, err = sql.Open("postgres", "postgres://project:password@localhost/db_project?sslmode=disable")
-		if err != nil {
-			panic(err)
-		}
-		if err = db.Ping(); err != nil {
-			panic(err)
-		}
+	// CAN I CREATE DATABASE AUTOMATICALLY FROM HERE
 
-		wine.DB = db
-		purchase.DB = db
-		catalog.DB = db
-	*/
+	// connect to database
+	db, err = sql.Open("postgres", "postgres://project:password@localhost/wcms?sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+
+	wine.DB = db
+	purchase.DB = db
+	catalog.DB = db
+
 	log.Println("Successfully connected to database")
 }
 

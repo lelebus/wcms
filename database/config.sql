@@ -43,8 +43,8 @@ CREATE TABLE origin (
 );
 
 CREATE TABLE catalog (
-  id int PRIMARY KEY,
-  name text NOT NULL,
+  id int NOT NULL PRIMARY KEY,
+  name text NOT NULL UNIQUE,
   level integer NOT NULL CHECK (level >= 0 AND level <= 3),
   parent int FOREIGN KEY REFERENCES catalog(id)
   type text[],
@@ -56,14 +56,15 @@ CREATE TABLE catalog (
   winery text[],
   storage text[],
   wine integer[],
-  FOREIGN KEY (territory, region, country) REFERENCES territory(name, region, country)
+  customized boolean
 );
 
 CREATE TABLE purchase (
-  id int PRIMARY KEY,
-  wine int NOT NULL references wine(id),
-  date timestamp NOT NULL, --'2016-06-22 19:10:25-07'
+  id int NOT NULL PRIMARY KEY,
+  wine int NOT NULL PRIMARY KEY,
+  date timestamp NOT NULL PRIMARY KEY,
   supplier text,
-  quantity int NOT NULL,
-  cost money NOT NULL
+  quantity integer NOT NULL,
+  cost money NOT NULL,
+  FOREIGN KEY (wine) REFERENCES wine(id) ON DELETE RESTRICT
 );
