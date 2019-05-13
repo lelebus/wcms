@@ -49,10 +49,10 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 
 	if selection == "" {
-		query = `SELECT name, level FROM catalog` //QUERY ALL CATALOGS
+		query = `SELECT id, name, level, is_customized FROM catalog;`
 		body, err = queryCatalog(true, query)
 	} else {
-		query = `SELECT * WHERE name = ` + selection //QUERY SELECTION
+		query = `SELECT * FROM catalog WHERE id = ` + selection + `;`
 		body, err = queryCatalog(false, query)
 	}
 	if err != nil {
@@ -106,9 +106,9 @@ func queryCatalog(all bool, query string) ([]byte, error) {
 		catalog := Catalog{}
 
 		if all {
-			err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level)
+			err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Customized)
 		} else {
-			err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Year), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Storage), pq.Array(&catalog.Wine))
+			err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Year), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Wines))
 		}
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved catalog entries: " + err.Error())
@@ -149,23 +149,20 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, catalog := range catalogs {
-		var query string
-
 		if !catalog.Customized {
 			// get wines matching catalog parameters
-			query = `SELECT id FROM wine WHERE`
-			wines, err := getMatchingIDs(query)
+			wines, err := getMatchingIDs(catalog.ID)
 			if err != nil {
 				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 				log.Println(err)
 				return
 			}
-			catalog.Wine = wines
+			catalog.Wines = wines
 		}
 
 		// insert catalog
-		query = `INSERT INTO catalog ( LIST VALUES ) VALUES ($1)`
-		_, err = DB.Exec(query, pq.Array(catalog.Name))
+		query := `UPDATE catalog SET wines = wines || $1 WHERE id = $2;`
+		_, err = DB.Exec(query, pq.Array(catalog.Wines), catalog.ID)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Println("ERROR inserting catalog \"" + catalog.Name + "\"in DB: " + err.Error())
@@ -195,10 +192,22 @@ func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
 	return catalogs, nil
 }
 
-func getMatchingIDs(query string) ([]int, error) {
+func getMatchingIDs(id int) ([]int, error) {
 
 	//query database
-	rows, err := DB.Query(query)
+	query := `
+			SELECT w.id FROM wine w, catalog c WHERE 
+			c.id = $1 AND
+			c.is_customized = false AND 
+		  	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
+		  	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
+		  	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
+		  	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
+		  	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
+		  	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
+			( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );`
+
+	rows, err := DB.Query(query, id)
 	if err != nil {
 		err = errors.New("ERROR in retrieving catalog entries from DB: " + err.Error())
 		return nil, err
@@ -269,22 +278,17 @@ func deleteCatalog(w http.ResponseWriter, r *http.Request) {
 
 	// ATOMIC FUNCTION to-do
 
-	// delete catalog
-	query = `DELETE FROM catalogs WHERE id = $1;`
+	// delete catalog and its references in wine
+	query = `
+	BEGIN; 
+	DELETE FROM catalog WHERE id = $1;
+	UPDATE wine SET catalogs = array_remove(catalogs, $1) WHERE id = $1;
+	COMMIT;`
 	_, err = DB.Exec(query, selection)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println("ERROR deleting catalog \"" + selection + "\" from DB: " + err.Error())
 	}
-
-	// delete catalog references in wines
-	query = `UPDATE FROM catalogs WHERE id = $1;`
-	_, err = DB.Exec(query, selection)
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR deleting catalog \"" + selection + "\" references from DB: " + err.Error())
-	}
-
 	// END
 
 	w.WriteHeader(http.StatusOK)

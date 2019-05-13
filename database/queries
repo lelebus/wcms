@@ -21,7 +21,7 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-1) Get ID, Name, Level, Customized of all customizable catalogs 
+1) Get ID, Name, Level, Customized of all catalogs 
    SELECT id, name, level, is_customized FROM catalog;
 
 2) Get all parameters of a catalog by ID
@@ -39,7 +39,7 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
          ( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );
     
 4) Insert catalog with array of wine IDs retrieved in 3
-   UPDATE catalog SET wines = array_append(wines, $1);
+   UPDATE catalog SET wines = array_append(wines, $1) WHERE id = $2;
         
 5) Insert wine
    INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalog,details,internal_notes,is_active)

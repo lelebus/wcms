@@ -1,6 +1,7 @@
 package catalogs
 
 import (
+	"errors"
 	"log"
 	"net/http"
 )
@@ -74,7 +75,26 @@ func arrayToJSON(title string, array []string) string {
 func getAll(field, table string) (string, error) {
 	var fields []string
 
-	// SELECT " + field + " FROM " + table
+	query := `SELECT $1 FROM $2;`
+
+	rows, err := DB.Query(query, field, table)
+	if err != nil {
+		err = errors.New("ERROR in retrieving " + table + " entries from DB: " + err.Error())
+		return "", err
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	for rows.Next() {
+		var value string
+		err = rows.Scan(&value)
+		if err != nil {
+			err = errors.New("ERROR in scanning retrieved + " + table + " entries: " + err.Error())
+			return "", err
+		}
+
+		fields = append(fields, value)
+	}
 
 	return arrayToJSON(field, fields), nil
 }
