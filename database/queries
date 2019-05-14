@@ -39,11 +39,14 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
          ( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );
     
 4) Insert catalog with array of wine IDs retrieved in 3
-   UPDATE catalog SET wines = array_append(wines, $1) WHERE id = $2;
-        
+   INSERT INTO catalog (name, level, parent, type, size, year, territory, region, country, winery, wines, is_customized)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
+	UPDATE wine SET catalogs = array_append(catalogs, $1) WHERE $2 @> ARRAY[id];
+
 5) Insert wine
    INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalog,details,internal_notes,is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];
 
 6) Update name of a catalog by ID
    UPDATE catalog SET name = $1 WHERE id = $2;
@@ -68,10 +71,7 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
          ( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
          ( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );
         
-12)Insert catalog
-   INSERT INTO catalog (name, level, parent, type, size, year, territory, region, country, winery, is_customized)
-   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-        
+      
 13)Delete wine by ID and its REFERENCES inside catalogs
    DELETE FROM wine WHERE id = $1;
    UPDATE catalog SET wines = array_remove(wines, $1) WHERE id = $2;
@@ -80,7 +80,7 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
 	SELECT p.* FROM purchase p, wine w WHERE w.id = $1;
 
 15)Insert purchase
-   INSERT INTO purchase (id,wine,supplier,quantity,cost) 
+   INSERT INTO purchase (id,date,wine,supplier,quantity,cost) 
    VALUES ($1, $2, $3, $4, $5);
 
 16)Get customizable catalogs of an array

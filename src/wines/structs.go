@@ -1,7 +1,7 @@
 package wines
 
 type Wine struct {
-	ID            string `json:"id"`
+	ID            int    `json:"id"`
 	StorageArea   string `json:"storage-area"`
 	Type          string `json:"type"`
 	Size          string `json:"size"`
@@ -12,7 +12,7 @@ type Wine struct {
 	Region        string `json:"region"`
 	Country       string `json:"country"`
 	Price         string `json:"price"`
-	Catalog       string `json:"catalog"`
+	Catalogs      []int  `json:"catalog"`
 	Details       string `json:"details"`
 	InternalNotes string `json:"internal-notes"`
 	IsActive      bool   `json:"is-active"`

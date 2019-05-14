@@ -149,7 +149,9 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, catalog := range catalogs {
+
 		if !catalog.Customized {
+
 			// get wines matching catalog parameters
 			wines, err := getMatchingIDs(catalog.ID)
 			if err != nil {
@@ -161,11 +163,28 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// insert catalog
-		query := `UPDATE catalog SET wines = wines || $1 WHERE id = $2;`
-		_, err = DB.Exec(query, pq.Array(catalog.Wines), catalog.ID)
+		query := `
+		BEGIN;
+		INSERT INTO catalog (name, level, parent, type, size, year, territory, region, country, winery, wines, is_customized)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
+
+		_, err = DB.Exec(query, catalog.Name, catalog.Level, catalog.Parent, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Year), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery), pq.Array(catalog.Wines), catalog.Customized)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Println("ERROR inserting catalog \"" + catalog.Name + "\"in DB: " + err.Error())
+			return
+		}
+
+		// insert catalog id in matching wines
+		query = `
+		UPDATE wine SET catalogs = array_append(catalogs, $1) WHERE $2 @> ARRAY[id];
+		COMMIT;`
+
+		_, err = DB.Exec(query, catalog.ID, pq.Array(catalog.Wines))
+		if err != nil {
+			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+			log.Println("ERROR inserting catalog \"" + catalog.Name + "\"in wines: " + err.Error())
+			return
 		}
 
 		log.Printf("SUCCESSFUL import: \"%v\"", catalog.Name)
@@ -209,7 +228,7 @@ func getMatchingIDs(id int) ([]int, error) {
 
 	rows, err := DB.Query(query, id)
 	if err != nil {
-		err = errors.New("ERROR in retrieving catalog entries from DB: " + err.Error())
+		err = errors.New("ERROR in retrieving matching wines to catalog " + string(id) + ": " + err.Error())
 		return nil, err
 	}
 	defer rows.Close()
@@ -220,7 +239,7 @@ func getMatchingIDs(id int) ([]int, error) {
 		var id int
 		err = rows.Scan(&id)
 		if err != nil {
-			err = errors.New("ERROR in scanning retrieved catalog entries: " + err.Error())
+			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
 			return nil, err
 		}
 
@@ -276,8 +295,6 @@ func deleteCatalog(w http.ResponseWriter, r *http.Request) {
 	var query string
 	var err error
 
-	// ATOMIC FUNCTION to-do
-
 	// delete catalog and its references in wine
 	query = `
 	BEGIN; 
@@ -289,7 +306,6 @@ func deleteCatalog(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println("ERROR deleting catalog \"" + selection + "\" from DB: " + err.Error())
 	}
-	// END
 
 	w.WriteHeader(http.StatusOK)
 	log.Printf("SUCCESSFUL delete ID: %v \n", selection)

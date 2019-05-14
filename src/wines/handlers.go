@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // DB Connection
@@ -48,17 +50,10 @@ func writeError(id string, message string, w http.ResponseWriter) {
 func getWine(w http.ResponseWriter, r *http.Request) {
 	selection := r.URL.Path[len(URLPath):]
 
-	var query = `SELECT ID, area, type, size, name, winery, year, region, country, price, catalog, details, internalnotes FROM wine `
 	var err error
 	var body []byte
 
-	// for single wine get more details and purchases
-	if selection != "" {
-		query += "WHERE id = " + selection
-		body, err = queryWine(false, query)
-	} else {
-		body, err = queryWine(true, query)
-	}
+	body, err = queryWine(selection)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
@@ -70,54 +65,50 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func queryWine(all bool, query string) ([]byte, error) {
-
-	// MOCK UP
-	var wines []Wine
-	one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "", "France", "500", "Stellar Wines", "Recently Disgorged", "", true}
-	two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Friuli - Venezia - Giulia", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma", true}
-	if all {
-		wines = []Wine{one, two}
-	} else {
-		id := query[(len(query) - 1):]
-		if id == "1" {
-			wines = []Wine{one}
-		} else {
-			wines = []Wine{two}
-		}
-	}
-	// END
-
-	// WITH DATABASE
+func queryWine(id string) ([]byte, error) {
 	/*
-		// query database
-		rows, err := DB.Query(query)
+		// MOCK UP
+		var wines []Wine
+		one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "", "France", "500", "Stellar Wines", "Recently Disgorged", "", true}
+		two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Friuli - Venezia - Giulia", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma", true}
+		if all {
+			wines = []Wine{one, two}
+		} else {
+			id := query[(len(query) - 1):]
+			if id == "1" {
+				wines = []Wine{one}
+			} else {
+				wines = []Wine{two}
+			}
+		}
+		// END
+	*/
+	var query = `SELECT id, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes, is_active FROM wine `
+
+	if id != "" {
+		query += `WHERE id = ` + id
+	}
+
+	// query database
+	rows, err := DB.Query(query + ";")
+	if err != nil {
+		err = errors.New("ERROR in retrieving wine entries from DB: " + err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	wines := make([]Wine, 0)
+	for rows.Next() {
+		wine := Wine{}
+
+		err = rows.Scan(&wine.ID, &wine.StorageArea, &wine.Type, &wine.Size, &wine.Name, &wine.Year, &wine.Territory, &wine.Region, &wine.Country, &wine.Price, pq.Array(&wine.Catalogs), &wine.Details, &wine.InternalNotes, &wine.IsActive)
 		if err != nil {
-			err = errors.New("ERROR in retrieving wine entries from DB: " + err.Error())
+			err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
 			return nil, err
 		}
-		defer rows.Close()
-
-		// read retrieved lines
-		wines := make([]Wine, 0)
-		for rows.Next() {
-			wine := Wine{}
-
-			// FINISH WHEN DB READY
-				if all {
-					err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
-				} else {
-					err = rows.Scan(&wine.ID, &wine.Area, &wine.Type )
-					// QUERY PURCHASE
-				}
-
-			if err != nil {
-				err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
-				return nil, err
-			}
-			wines = append(wines, wine)
-		}
-	*/
+		wines = append(wines, wine)
+	}
 
 	// marshal wines
 	body, err := json.Marshal(wines)
@@ -144,10 +135,11 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 	log.Println("check wine OK")
 
 	for _, wine := range wines {
-		err := insertWineInDB(wine)
+		err := insertWine(wine)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Println(err)
+			return
 		}
 
 		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
@@ -165,7 +157,7 @@ func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 		return nil, errors.New(e)
 	}
 
-	wines, err := readWineToJSON(r)
+	wines, err := readWineFromJSON(r)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		return nil, err
@@ -184,7 +176,7 @@ func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 }
 
 // Create array of Wine from json array given as input
-func readWineToJSON(r *http.Request) ([]Wine, error) {
+func readWineFromJSON(r *http.Request) ([]Wine, error) {
 	var wines []Wine
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -208,12 +200,12 @@ func readWineToJSON(r *http.Request) ([]Wine, error) {
 func checkWineParameter(wine Wine) (string, error) {
 
 	if !contains(WineType, strings.ToLower(wine.Type)) {
-		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine. Check line " + wine.ID
+		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine. Check line " + string(wine.ID)
 		return "type", errors.New(e)
 	}
 
 	if !contains(WineSize, wine.Size) {
-		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + string(wine.ID)
 		return "size", errors.New(e)
 	}
 
@@ -223,21 +215,21 @@ func checkWineParameter(wine Wine) (string, error) {
 
 	productionYear, err := strconv.ParseInt(wine.Year, 10, 64)
 	if err != nil {
-		e := "YEAR of wine must be an integer. Check line " + wine.ID
+		e := "YEAR of wine must be an integer. Check line " + string(wine.ID)
 		return "production_year", errors.New(e)
 	}
 	if productionYear > currentYear {
-		e := "YEAR of wine cannot be set in the future. Check line " + wine.ID
+		e := "YEAR of wine cannot be set in the future. Check line " + string(wine.ID)
 		return "production_year", errors.New(e)
 	}
 
 	v, err := strconv.ParseFloat(wine.Price, 10)
 	if err != nil {
-		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + wine.ID
+		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + string(wine.ID)
 		return "price", errors.New(e)
 	}
 	if v < 0 {
-		err := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive). Check line " + wine.ID
+		err := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive). Check line " + string(wine.ID)
 		return "price", errors.New(err)
 	}
 
@@ -246,15 +238,72 @@ func checkWineParameter(wine Wine) (string, error) {
 }
 
 // Insert wine in database, checking insertion in other catalogs
-func insertWineInDB(wine Wine) error {
-	// CHECK IF IT SATISFIES REQUIREMENTS FOR SOME CATALOG
-	// INSERT CATALOGS INTO WINE
-	// INSERT WINE INTO CATALOGS
+func insertWine(wine Wine) error {
+	// get catalogs matching wine's parameters
+	catalogs, err := getMatchingIDs(wine.ID)
+	if err != nil {
+		return err
+	}
+	wine.Catalogs = append(wine.Catalogs, catalogs...)
 
-	// e := "ERROR in inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
-	// return errors.New(e)
+	// insert wine
+	query := `
+	BEGIN; 
+	INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes,is_active)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`
+
+	_, err = DB.Exec(query, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes, wine.IsActive)
+	if err != nil {
+		err := "ERROR inserting wine \"" + string(wine.ID) + "\" in DB: " + err.Error()
+		return errors.New(err)
+	}
+
+	// insert wine id in matching catalogs
+	query = `
+	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];
+	COMMIT;`
+
+	_, err = DB.Exec(query, wine.ID, wine.Catalogs)
+	if err != nil {
+		err := "ERROR inserting wine \"" + string(wine.ID) + "\" in catalogs: " + err.Error()
+		return errors.New(err)
+	}
 
 	return nil
+}
+
+func getMatchingIDs(id int) ([]int, error) {
+	//query database
+	query := `
+	SELECT c.id FROM wine w, catalog c WHERE w.id = $1 AND
+	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
+	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
+	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
+	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
+	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
+	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
+	( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );`
+
+	rows, err := DB.Query(query, id)
+	if err != nil {
+		err = errors.New("ERROR in retrieving catalog ids matching wine " + string(id) + ": " + err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	array := make([]int, 0)
+	for rows.Next() {
+		var id int
+		err = rows.Scan(&id)
+		if err != nil {
+			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
+			return nil, err
+		}
+
+		array = append(array, id)
+	}
+	return array, nil
 }
 
 //////////////////////////////////////////////////////////
@@ -283,12 +332,36 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateWineDB(wine Wine) error {
-	err := deleteWineFromDB(wine.ID)
+	// get all customized catalogs, in which wine is inserted
+	query := `SELECT id FROM catalog WHERE ARRAY[id] <@ $1 AND is_customized = true;`
+
+	rows, err := DB.Query(query, pq.Array(wine.Catalogs))
+	if err != nil {
+		err = errors.New("ERROR in retrieving catalog ids matching wine " + string(wine.ID) + ": " + err.Error())
+		return err
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	catalogs := make([]int, 0)
+	for rows.Next() {
+		var id int
+		err = rows.Scan(&id)
+		if err != nil {
+			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
+			return err
+		}
+
+		catalogs = append(catalogs, id)
+	}
+	wine.Catalogs = catalogs
+
+	err = deleteWineFromDB(string(wine.ID))
 	if err != nil {
 		return err
 	}
 
-	err = insertWineInDB(wine)
+	err = insertWine(wine)
 	if err != nil {
 		return err
 	}
