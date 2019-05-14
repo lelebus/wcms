@@ -1,6 +1,6 @@
 import Vue from 'vue';
 import Router from 'vue-router';
-import Home from './view/Home';
+import Dashboard from './view/Dashboard';
 
 Vue.use(Router);
 
@@ -9,13 +9,31 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: Home,
+      name: 'dashboard',
+      component: Dashboard,
     },
+
     {
-      path: '/about',
-      name: 'about',
-      component: () => import('./view/About'),
+      path: '/import',
+      name: 'import',
+      component: () => import('./view/Import'),
+    },
+
+    {
+      path: '/export',
+      name: 'export',
+      component: () => import('./view/Export'),
+    },
+
+    {
+      path: '/wine/:id',
+      component: () => import('./view/Wine'),
+    },
+
+    {
+      path: '/catalog/new',
+      name: 'create-catalog',
+      component: () => import('./view/CreateCatalog'),
     },
   ],
 });
