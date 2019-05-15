@@ -1,16 +1,3 @@
-
-
-CREATE TABLE IF NOT EXISTS winery (
-  name text PRIMARY KEY
-);
-
-CREATE TABLE IF NOT EXISTS origin (
-  territory text,
-  region text,
-  country text NOT NULL, 
-  PRIMARY KEY (territory, region, country)
-);
-
 CREATE TABLE IF NOT EXISTS wine (
   id SERIAL PRIMARY KEY UNIQUE,
   storage_area text NOT NULL,
