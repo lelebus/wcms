@@ -1,10 +1,15 @@
 package catalogs
 
 import (
-	"errors"
 	"log"
 	"net/http"
 )
+
+type origin struct {
+	territory string
+	region    string
+	country   string
+}
 
 // URLPath for this API
 var ParameterPath = URLPath + "parameters"
@@ -20,81 +25,81 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body := `{ "parameters": [`
+	var query string
 
-	territories, err := getAll("territory", "origin")
+	// get distinct origins
+	var arrayOrigins []origin
+
+	query = `SELECT DISTINCT territory, region, country FROM wines;`
+
+	rows, err := DB.Query(query)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving Territories: " + err.Error())
+		log.Println("ERROR in retrieving origin entries from DB: " + err.Error())
 		return
-	}
-	regions, err := getAll("region", "origin")
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving Regions: " + err.Error())
-		return
-	}
-	countries, err := getAll("country", "origin")
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving Countries: " + err.Error())
-		return
-	}
-	wineries, err := getAll("winery", "winery")
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving Wineries: " + err.Error())
-		return
-	}
-
-	// MOCK UP
-	territories = arrayToJSON("territories", []string{"Champagne", "Colli Orientali del Friuli"})
-	regions = arrayToJSON("regions", []string{"Friuli Venezia Giulia"})
-	countries = arrayToJSON("countries", []string{"France", "Italy"})
-	wineries = arrayToJSON("wineries", []string{"Bollinger", "Ronco Severo"})
-	// END
-
-	body += wineries + territories + regions + countries + `]}`
-
-	w.Header().Set("Content-Type", "application-json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(body))
-}
-
-func arrayToJSON(title string, array []string) string {
-	body := `"` + title + `": [`
-	for index, element := range array {
-		body += `"` + element
-		if index != (len(array) - 1) {
-			body += `,`
-		}
-	}
-	return body
-}
-
-func getAll(field, table string) (string, error) {
-	var fields []string
-
-	query := `SELECT $1 FROM $2;`
-
-	rows, err := DB.Query(query, field, table)
-	if err != nil {
-		err = errors.New("ERROR in retrieving " + table + " entries from DB: " + err.Error())
-		return "", err
 	}
 	defer rows.Close()
 
 	// read retrieved lines
 	for rows.Next() {
-		var value string
-		err = rows.Scan(&value)
+		var row origin
+		err = rows.Scan(&row.territory, &row.region, &row.country)
 		if err != nil {
-			err = errors.New("ERROR in scanning retrieved + " + table + " entries: " + err.Error())
-			return "", err
+			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+			log.Println("ERROR in scanning retrieved origin entries: " + err.Error())
+			return
 		}
 
-		fields = append(fields, value)
+		arrayOrigins = append(arrayOrigins, row)
 	}
 
-	return arrayToJSON(field, fields), nil
+	origins := `"origins": [`
+	for index, element := range arrayOrigins {
+		origins += `{ territory": "` + element.territory + `", "region": "` + element.region + `", "country": "` + element.country + `"}`
+		if index != (len(arrayOrigins) - 1) {
+			origins += `,`
+		}
+	}
+	origins += `]`
+
+	// get distinct wineries
+	var arrayWineries []string
+
+	query = `SELECT DISTINCT winery FROM wines;`
+
+	rows, err = DB.Query(query)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println("ERROR in retrieving winery entries from DB: " + err.Error())
+		return
+	}
+	defer rows.Close()
+
+	// read retrieved lines
+	for rows.Next() {
+		var row string
+		err = rows.Scan(&row)
+		if err != nil {
+			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+			log.Println("ERROR in scanning retrieved winery entries: " + err.Error())
+			return
+		}
+
+		arrayWineries = append(arrayWineries, row)
+	}
+
+	wineries := `"wineries": [`
+	for index, element := range arrayWineries {
+		wineries += `"` + element + `"`
+		if index != (len(arrayWineries) - 1) {
+			origins += `,`
+		}
+	}
+	wineries += `]`
+
+	body := `{ ` + wineries + `, ` + origins + ` }`
+
+	w.Header().Set("Content-Type", "application-json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(body))
 }
