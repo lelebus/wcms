@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/lib/pq"
 )
@@ -256,7 +257,7 @@ func getMatchingIDs(id int) ([]int, error) {
 func updateCatalog(w http.ResponseWriter, r *http.Request) {
 
 	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "", 415)
 		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
 		return

@@ -151,7 +151,8 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 
 	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
+	
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, http.StatusText(415), 415)
 		e := `ERROR in request-header "Content-Type" field: just "application/json" is accepted`
 		return nil, errors.New(e)

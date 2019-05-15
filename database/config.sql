@@ -1,17 +1,17 @@
 
 
-CREATE TABLE winery (
+CREATE TABLE IF NOT EXISTS winery (
   name text PRIMARY KEY
 );
 
-CREATE TABLE origin (
+CREATE TABLE IF NOT EXISTS origin (
   territory text,
   region text,
   country text NOT NULL, 
   PRIMARY KEY (territory, region, country)
 );
 
-CREATE TABLE wine (
+CREATE TABLE IF NOT EXISTS wine (
   id SERIAL PRIMARY KEY UNIQUE,
   storage_area text NOT NULL,
   type text NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE wine (
   FOREIGN KEY (territory, region, country) references origin(territory,region,country)
 );
 
-CREATE TABLE catalog (
+CREATE TABLE IF NOT EXISTS catalog (
   id SERIAL PRIMARY KEY,
   name text NOT NULL UNIQUE,
   level int NOT NULL,
@@ -46,10 +46,10 @@ CREATE TABLE catalog (
   is_customized boolean
 );
 
-CREATE TABLE purchase (
-  id int NOT NULL PRIMARY KEY,
-  wine int NOT NULL PRIMARY KEY,
-  date timestamp NOT NULL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS purchase (
+  id int PRIMARY KEY,
+  wine int NOT NULL references wine(id),
+  date timestamp NOT NULL, --'2016-06-22 19:10:25-07'
   supplier text,
   quantity integer NOT NULL,
   cost money NOT NULL
