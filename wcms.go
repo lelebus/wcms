@@ -1,10 +1,11 @@
 package main
 
 import (
-	catalog "WCMS/src/catalogs"
-	purchase "WCMS/src/purchases"
-	wine "WCMS/src/wines"
+	catalog "WCMS/pkg/catalogs"
+	purchase "WCMS/pkg/purchases"
+	wine "WCMS/pkg/wines"
 	"database/sql"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -14,8 +15,7 @@ import (
 )
 
 var db *sql.DB
-
-const port = ":8080"
+var port string
 
 func init() {
 	logfile, err := os.OpenFile("wcms.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -30,8 +30,16 @@ func init() {
 	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
 	// CAN I CREATE DATABASE AUTOMATICALLY FROM HERE
 
+	configuration := loadConfig("config.json")
+	port = ":" + configuration.Port
+
 	// connect to database
-	db, err = sql.Open("postgres", "postgres://project:password@localhost/wcms?sslmode=disable")
+	connection := "host=" + configuration.DB.Host + " dbname=" + configuration.DB.Name +
+		" user=" + configuration.DB.User + " password=" + configuration.DB.Password + " sslmode=disable"
+
+	log.Println(connection)
+
+	db, err = sql.Open("postgres", connection)
 	if err != nil {
 		panic(err)
 	}
@@ -44,6 +52,34 @@ func init() {
 	catalog.DB = db
 
 	log.Println("Successfully connected to database")
+}
+
+type Config struct {
+	Port string `json:"port"`
+	DB   struct {
+		Host     string `json:"host"`
+		Name     string `json:"name"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+	} `json:"postgreSQL"`
+}
+
+func loadConfig(file string) Config {
+	var configuration Config
+
+	configFile, err := os.Open(file)
+	if err != nil {
+		log.Println(err.Error())
+		return Config{}
+	}
+	defer configFile.Close()
+
+	decoder := json.NewDecoder(configFile)
+	decoder.Decode(&configuration)
+
+	// log.Println(configuration)
+
+	return configuration
 }
 
 func main() {
