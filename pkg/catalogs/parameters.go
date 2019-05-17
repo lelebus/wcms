@@ -12,7 +12,7 @@ type origin struct {
 }
 
 // URLPath for this API
-var ParameterPath = URLPath + "parameters"
+var ParameterPath = URLPath + "parameters/"
 
 // Get all parameter necessary for automatic Catalog creation
 func GetAllParameters(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 	// get distinct origins
 	var arrayOrigins []origin
 
-	query = `SELECT DISTINCT territory, region, country FROM wines;`
+	query = `SELECT DISTINCT territory, region, country FROM wine;`
 
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -65,7 +65,7 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 	// get distinct wineries
 	var arrayWineries []string
 
-	query = `SELECT DISTINCT winery FROM wines;`
+	query = `SELECT DISTINCT winery FROM wine;`
 
 	rows, err = DB.Query(query)
 	if err != nil {

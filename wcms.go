@@ -122,6 +122,7 @@ func serveJS(w http.ResponseWriter, r *http.Request) {
 //////////////////////////////////////////////////////////
 func main() {
 	log.Printf("Starting server at port %v \n", port)
+	log.Print(catalog.ParameterPath)
 
 	http.HandleFunc(wine.URLPath, wine.WineHandler)
 	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
