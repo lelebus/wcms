@@ -250,7 +250,7 @@ func insertWine(wine Wine) error {
 	}
 	wine.Catalogs = append(wine.Catalogs, catalogs...)
 
-	// insert wine
+	// Create transaction for wine insert and reference in catalogs
 	tx, err := DB.Begin()
 	if err != nil {
 		err := "ERROR in beginning INSERT procedure for wine" + err.Error()
@@ -259,6 +259,7 @@ func insertWine(wine Wine) error {
 
 	var query string
 
+	// insert wine
 	if wine.Update {
 		query = `
 		INSERT INTO wine (id, storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes)
@@ -283,14 +284,6 @@ func insertWine(wine Wine) error {
 	// insert wine id in matching catalogs
 	query = `
 	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];`
-
-	// stmt, err := DB.Prepare(query)
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	err := "ERROR in preparing UPDATE statement to insert wine in catalogs: " + err.Error()
-	// 	return errors.New(err)
-	// }
-	// defer stmt.Close()
 
 	_, err = DB.Exec(query, wine.ID, pq.Array(wine.Catalogs))
 	if err != nil {
@@ -356,11 +349,13 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 	for _, wine := range wines {
 		err := updateWineDB(wine)
 		if err != nil {
+			log.Println(err)
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Printf("ABORTED process for \"%v\" update", wine.Name)
+			return
 		}
 
-		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
+		log.Printf("SUCCESSFUL update: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -392,7 +387,9 @@ func updateWineDB(wine Wine) error {
 	wine.Catalogs = catalogs
 	wine.Update = true
 
-	err = deleteWineFromDB(string(wine.ID))
+	sel := strconv.Itoa(wine.ID)
+
+	err = deleteWineFromDB(sel)
 	if err != nil {
 		return err
 	}
@@ -425,11 +422,38 @@ func deleteWine(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteWineFromDB(id string) error {
-	// DELETE query
-	// DELETE FROM CATALOG
+	// Create transaction for DELETE of wine and its references in catalog
+	tx, err := DB.Begin()
+	if err != nil {
+		err := "ERROR in beginning INSERT procedure for wine" + err.Error()
+		return errors.New(err)
+	}
 
-	// e:= "ERROR in ERROR in deleting Wine \""" + wine.Name + "\" from DB: " + err.Error()"
-	// return errors.New(e)
+	var query string
+
+	// delete wine
+	query = `DELETE FROM wine WHERE id = $1;`
+
+	_, err = DB.Exec(query, id)
+	if err != nil {
+		err := "ERROR deleting wine \"" + id + "\": " + err.Error()
+		return errors.New(err)
+	}
+
+	// delete wine references
+	query = `UPDATE catalog SET wines = array_remove(wines, $1) WHERE ARRAY[$1]::int[] <@ wines`
+
+	_, err = DB.Exec(query, id)
+	if err != nil {
+		err := "ERROR deleting wine \"" + id + "\" references: " + err.Error()
+		return errors.New(err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		err := "ERROR in completing commit for wine DELETE: " + err.Error()
+		return errors.New(err)
+	}
 
 	return nil
 }
