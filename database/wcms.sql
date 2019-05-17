@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS wine (
   type text NOT NULL,
   size float NOT NULL,
   name text NOT NULL,
-  winery text NOT NULL references winery(name),
+  winery text NOT NULL,
   year int NOT NULL,
   territory text,
   region text,
@@ -13,8 +13,7 @@ CREATE TABLE IF NOT EXISTS wine (
   catalogs int[],
   details text,
   internal_notes text,
-  is_active boolean,
-  FOREIGN KEY (territory, region, country) references origin(territory,region,country)
+  is_active boolean
 );
 
 CREATE TABLE IF NOT EXISTS catalog (

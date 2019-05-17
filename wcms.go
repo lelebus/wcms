@@ -6,7 +6,9 @@ import (
 	wine "WCMS/pkg/wines"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -15,10 +17,15 @@ import (
 )
 
 var db *sql.DB
+var configuration Config
 var port string
 
 func init() {
-	logfile, err := os.OpenFile("wcms.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	configuration = loadConfig("config.json")
+	port = ":" + configuration.Port
+
+	// create file for log or append to already existing one
+	logfile, err := os.OpenFile("log.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
@@ -30,34 +37,15 @@ func init() {
 	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
 	// CAN I CREATE DATABASE AUTOMATICALLY FROM HERE
 
-	configuration := loadConfig("config.json")
-	port = ":" + configuration.Port
-
-	// connect to database
-	connection := "host=" + configuration.DB.Host + " dbname=" + configuration.DB.Name +
-		" user=" + configuration.DB.User + " password=" + configuration.DB.Password + " sslmode=disable"
-
-	log.Println(connection)
-
-	db, err = sql.Open("postgres", connection)
-	if err != nil {
-		panic(err)
-	}
-	if err = db.Ping(); err != nil {
-		panic(err)
-	}
-
-	wine.DB = db
-	purchase.DB = db
-	catalog.DB = db
-
-	log.Println("Successfully connected to database")
+	connectDB()
+	// createDBTables()
 }
 
 type Config struct {
 	Port string `json:"port"`
 	DB   struct {
 		Host     string `json:"host"`
+		Port     string `json:"port"`
 		Name     string `json:"name"`
 		User     string `json:"user"`
 		Password string `json:"password"`
@@ -82,15 +70,39 @@ func loadConfig(file string) Config {
 	return configuration
 }
 
-func main() {
-	log.Printf("Starting server at port %v \n", port)
+func connectDB() {
+	connection := "host=" + configuration.DB.Host + " port=" + configuration.DB.Port + " dbname=" + configuration.DB.Name +
+		" user=" + configuration.DB.User + " password=" + configuration.DB.Password + " sslmode=disable"
 
-	http.HandleFunc(wine.URLPath, wine.WineHandler)
-	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
-	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
-	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
-	http.HandleFunc("/", serveJS)
-	http.ListenAndServe(port, nil)
+	db, err := sql.Open("postgres", connection)
+	if err != nil {
+		panic(err)
+	}
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+
+	wine.DB = db
+	purchase.DB = db
+	catalog.DB = db
+
+	log.Println("Successfully connected to database")
+}
+
+func createDBTables() {
+	file, err := ioutil.ReadFile("database/wcms.sql")
+	if err != nil {
+		err = errors.New("ERROR in reading file for creating DB tables: " + err.Error())
+		panic(err)
+	}
+
+	log.Println(string(file))
+
+	_, err = db.Exec(string(file))
+	if err != nil {
+		err = errors.New("ERROR in initiating postgreSQL database:" + err.Error())
+		panic(err)
+	}
 }
 
 func serveJS(w http.ResponseWriter, r *http.Request) {
@@ -101,4 +113,21 @@ func serveJS(w http.ResponseWriter, r *http.Request) {
 	}
 	http.ServeFile(w, r, filepath)
 	log.Printf(`SERVING "%v" for requested path: "%v"`, filepath, r.URL.Path)
+}
+
+//////////////////////////////////////////////////////////
+//
+// Start SERVER for REQUEST handling
+//
+//////////////////////////////////////////////////////////
+func main() {
+	log.Printf("Starting server at port %v \n", port)
+
+	http.HandleFunc(wine.URLPath, wine.WineHandler)
+	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
+	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
+	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
+	http.HandleFunc("/", serveJS)
+
+	http.ListenAndServe(port, nil)
 }

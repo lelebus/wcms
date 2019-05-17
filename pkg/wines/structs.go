@@ -15,10 +15,9 @@ type Wine struct {
 	Catalogs      []int  `json:"catalog"`
 	Details       string `json:"details"`
 	InternalNotes string `json:"internal-notes"`
-	IsActive      bool   `json:"is-active"`
+	Update        bool
 }
 
-// Chiedi a Babbo!!
 var WineType = []string{"red", "white", "sparkling", "sweet"}
 var WineSize = []string{"0.375", "0.75", "1", "1.5", "3", "4.5", "6", "9", "12"}
 

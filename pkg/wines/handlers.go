@@ -83,7 +83,7 @@ func queryWine(id string) ([]byte, error) {
 		}
 		// END
 	*/
-	var query = `SELECT id, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes, is_active FROM wine `
+	var query = `SELECT id, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes FROM wine `
 
 	if id != "" {
 		query += `WHERE id = ` + id
@@ -102,11 +102,16 @@ func queryWine(id string) ([]byte, error) {
 	for rows.Next() {
 		wine := Wine{}
 
-		err = rows.Scan(&wine.ID, &wine.StorageArea, &wine.Type, &wine.Size, &wine.Name, &wine.Year, &wine.Territory, &wine.Region, &wine.Country, &wine.Price, pq.Array(&wine.Catalogs), &wine.Details, &wine.InternalNotes, &wine.IsActive)
+		err = rows.Scan(&wine.ID, &wine.StorageArea, &wine.Type, &wine.Size, &wine.Name, &wine.Winery, &wine.Year, &wine.Territory, &wine.Region, &wine.Country, &wine.Price, pq.Array(&wine.Catalogs), &wine.Details, &wine.InternalNotes)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
 			return nil, err
 		}
+		if err != nil {
+			err = errors.New("ERROR in scanning retrieved wine ID: " + err.Error())
+			return nil, err
+		}
+
 		wines = append(wines, wine)
 	}
 
@@ -132,8 +137,6 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("check wine OK")
-
 	for _, wine := range wines {
 		err := insertWine(wine)
 		if err != nil {
@@ -151,7 +154,7 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 
 	// check correctness of request
-	
+
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, http.StatusText(415), 415)
 		e := `ERROR in request-header "Content-Type" field: just "application/json" is accepted`
@@ -248,25 +251,56 @@ func insertWine(wine Wine) error {
 	wine.Catalogs = append(wine.Catalogs, catalogs...)
 
 	// insert wine
-	query := `
-	BEGIN; 
-	INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes,is_active)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`
-
-	_, err = DB.Exec(query, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes, wine.IsActive)
+	tx, err := DB.Begin()
 	if err != nil {
-		err := "ERROR inserting wine \"" + string(wine.ID) + "\" in DB: " + err.Error()
+		err := "ERROR in beginning INSERT procedure for wine" + err.Error()
+		return errors.New(err)
+	}
+
+	var query string
+
+	if wine.Update {
+		query = `
+		INSERT INTO wine (id, storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`
+
+		_, err = DB.Exec(query, wine.ID, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
+
+	} else {
+		query = `
+		INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`
+
+		_, err = DB.Exec(query, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
+
+	}
+	if err != nil {
+		tx.Rollback()
+		err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
 		return errors.New(err)
 	}
 
 	// insert wine id in matching catalogs
 	query = `
-	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];
-	COMMIT;`
+	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];`
 
-	_, err = DB.Exec(query, wine.ID, wine.Catalogs)
+	// stmt, err := DB.Prepare(query)
+	// if err != nil {
+	// 	tx.Rollback()
+	// 	err := "ERROR in preparing UPDATE statement to insert wine in catalogs: " + err.Error()
+	// 	return errors.New(err)
+	// }
+	// defer stmt.Close()
+
+	_, err = DB.Exec(query, wine.ID, pq.Array(wine.Catalogs))
 	if err != nil {
-		err := "ERROR inserting wine \"" + string(wine.ID) + "\" in catalogs: " + err.Error()
+		err := "ERROR inserting wine \"" + wine.Name + "\" in catalogs: " + err.Error()
+		return errors.New(err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		err := "ERROR in completing commit for wine INSERT: " + err.Error()
 		return errors.New(err)
 	}
 
@@ -356,6 +390,7 @@ func updateWineDB(wine Wine) error {
 		catalogs = append(catalogs, id)
 	}
 	wine.Catalogs = catalogs
+	wine.Update = true
 
 	err = deleteWineFromDB(string(wine.ID))
 	if err != nil {
