@@ -1,13 +1,5 @@
 ---TEST--QUERIES--------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO winery VALUES ('Bollinger');
-
-INSERT INTO winery VALUES ('Ronco Severo');
-
-INSERT INTO origin (territory,region,country) VALUES ('Champagne','','France');
-
-INSERT INTO origin (territory,region,country) VALUES ('Colli Orientali','Friuli - Venezia - Giulia','Italia');
-
 INSERT INTO catalog (name, level, is_customized) VALUES ('Stellar Wines', 0, true);
 
 INSERT INTO catalog (name, level, type, size, year, territory, region, country, winery, is_customized) VALUES
@@ -74,7 +66,7 @@ INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,count
       
 13)Delete wine by ID and its REFERENCES inside catalogs
    DELETE FROM wine WHERE id = $1;
-   UPDATE catalog SET wines = array_remove(wines, $1) WHERE id = $2;
+   UPDATE catalog SET wines = array_remove(wines, $1) WHERE ARRAY[$1] <@ wines;
     
 14)Get all purchases with all parameters by wine ID
 	SELECT p.* FROM purchase p, wine w WHERE w.id = $1;

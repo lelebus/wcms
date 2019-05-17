@@ -40,3 +40,5 @@ CREATE TABLE IF NOT EXISTS purchase (
   quantity integer NOT NULL,
   cost money NOT NULL
 );
+
+INSERT INTO catalog (id, name, level, parent) VALUES (0, 'root', 0, 0);

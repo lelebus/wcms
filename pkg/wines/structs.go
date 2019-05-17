@@ -1,20 +1,20 @@
 package wines
 
 type Wine struct {
-	ID            int    `json:"id"`
-	StorageArea   string `json:"storage-area"`
-	Type          string `json:"type"`
-	Size          string `json:"size"`
-	Name          string `json:"name"`
-	Winery        string `json:"winery"`
-	Year          string `json:"year"`
-	Territory     string `json:"territory"`
-	Region        string `json:"region"`
-	Country       string `json:"country"`
-	Price         string `json:"price"`
-	Catalogs      []int  `json:"catalog"`
-	Details       string `json:"details"`
-	InternalNotes string `json:"internal-notes"`
+	ID            int      `json:"id"`
+	StorageArea   string   `json:"storage-area"`
+	Type          string   `json:"type"`
+	Size          string   `json:"size"`
+	Name          string   `json:"name"`
+	Winery        string   `json:"winery"`
+	Year          string   `json:"year"`
+	Territory     string   `json:"territory"`
+	Region        string   `json:"region"`
+	Country       string   `json:"country"`
+	Price         string   `json:"price"`
+	Catalogs      []string `json:"catalog"`
+	Details       string   `json:"details"`
+	InternalNotes string   `json:"internal-notes"`
 	Update        bool
 }
 

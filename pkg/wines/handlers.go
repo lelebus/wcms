@@ -66,23 +66,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 }
 
 func queryWine(id string) ([]byte, error) {
-	/*
-		// MOCK UP
-		var wines []Wine
-		one := Wine{"1", "X 2", "sparkling", "1.5", "R.D.", "Bollinger", "1985", "Champagne", "", "France", "500", "Stellar Wines", "Recently Disgorged", "", true}
-		two := Wine{"2", "Z 14", "white", "0.75", "Ribolla Gialla", "Ronco Severo", "2008", "Colli Orientali del Friuli", "Friuli - Venezia - Giulia", "Italy", "90", "Vini Italiani / Friuli Venezia Giulia", "Macerazione uve", "Alfa Beta Gamma e tu Mamma", true}
-		if all {
-			wines = []Wine{one, two}
-		} else {
-			id := query[(len(query) - 1):]
-			if id == "1" {
-				wines = []Wine{one}
-			} else {
-				wines = []Wine{two}
-			}
-		}
-		// END
-	*/
+
 	var query = `SELECT id, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes FROM wine `
 
 	if id != "" {
@@ -189,8 +173,6 @@ func readWineFromJSON(r *http.Request) ([]Wine, error) {
 		return nil, errors.New(e)
 	}
 
-	log.Println(string(body))
-
 	err = json.Unmarshal(body, &wines)
 	if err != nil {
 		e := "ERROR in unmarshalling JSON body: " + err.Error()
@@ -244,18 +226,12 @@ func checkWineParameter(wine Wine) (string, error) {
 // Insert wine in database, checking insertion in other catalogs
 func insertWine(wine Wine) error {
 	// get catalogs matching wine's parameters
-	catalogs, err := getMatchingIDs(wine.ID)
+	catalogs, err := getMatchingIDs(wine)
 	if err != nil {
 		return err
 	}
-	wine.Catalogs = append(wine.Catalogs, catalogs...)
 
-	// Create transaction for wine insert and reference in catalogs
-	tx, err := DB.Begin()
-	if err != nil {
-		err := "ERROR in beginning INSERT procedure for wine" + err.Error()
-		return errors.New(err)
-	}
+	wine.Catalogs = append(wine.Catalogs, catalogs...)
 
 	var query string
 
@@ -266,63 +242,62 @@ func insertWine(wine Wine) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`
 
 		_, err = DB.Exec(query, wine.ID, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
-
+		if err != nil {
+			err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
+			return errors.New(err)
+		}
 	} else {
 		query = `
 		INSERT INTO wine (storage_area,type,size,name,winery,year,territory,region,country,price,catalogs,details,internal_notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id;`
 
-		_, err = DB.Exec(query, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
+		result := DB.QueryRow(query, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
 
-	}
-	if err != nil {
-		tx.Rollback()
-		err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
-		return errors.New(err)
+		err := result.Scan(&wine.ID)
+		if err != nil {
+			err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
+			return errors.New(err)
+		}
+
 	}
 
 	// insert wine id in matching catalogs
-	query = `
-	UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];`
+	query = `UPDATE catalog SET wines = array_append(wines, $1) WHERE $2 @> ARRAY[id];`
 
 	_, err = DB.Exec(query, wine.ID, pq.Array(wine.Catalogs))
 	if err != nil {
 		err := "ERROR inserting wine \"" + wine.Name + "\" in catalogs: " + err.Error()
-		return errors.New(err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		err := "ERROR in completing commit for wine INSERT: " + err.Error()
+		id := strconv.Itoa(wine.ID)
+		deleteWineFromDB(id)
 		return errors.New(err)
 	}
 
 	return nil
 }
 
-func getMatchingIDs(id int) ([]int, error) {
+func getMatchingIDs(wine Wine) ([]string, error) {
 	//query database
 	query := `
-	SELECT c.id FROM wine w, catalog c WHERE w.id = $1 AND
-	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
-	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
-	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
-	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
-	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
-	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
-	( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );`
+	SELECT c.id FROM catalog c WHERE
+	( ARRAY[$1] <@ (c.type) OR c.type = '{}' ) AND 
+	( ARRAY[$2]::float[] <@ (c.size) OR c.size = '{}' ) AND 
+	( ARRAY[$3]::int[] <@ (c.year) OR c.year = '{}' ) AND 
+	( ARRAY[$4] <@ (c.territory) OR c.territory = '{}' ) AND 
+	( ARRAY[$5] <@ (c.region) OR c.region = '{}' ) AND 
+	( ARRAY[$6] <@ (c.country) OR c.country = '{}' ) AND 
+	( ARRAY[$7] <@ (c.winery) OR c.winery = '{}' );`
 
-	rows, err := DB.Query(query, id)
+	rows, err := DB.Query(query, wine.Type, wine.Size, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Winery)
 	if err != nil {
-		err = errors.New("ERROR in retrieving catalog ids matching wine " + string(id) + ": " + err.Error())
+		err = errors.New("ERROR in retrieving catalog ids matching wine " + wine.Name + " BY " + wine.Winery + " - " + wine.Year + ": " + err.Error())
 		return nil, err
 	}
 	defer rows.Close()
 
 	// read retrieved lines
-	array := make([]int, 0)
+	array := make([]string, 0)
 	for rows.Next() {
-		var id int
+		var id string
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
@@ -373,12 +348,12 @@ func updateWineDB(wine Wine) error {
 	defer rows.Close()
 
 	// read retrieved lines
-	catalogs := make([]int, 0)
+	catalogs := make([]string, 0)
 	for rows.Next() {
-		var id int
+		var id string
 		err = rows.Scan(&id)
 		if err != nil {
-			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
+			err = errors.New("ERROR in scanning retrieved catalog ids: " + err.Error())
 			return err
 		}
 
