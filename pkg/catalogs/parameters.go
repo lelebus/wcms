@@ -99,7 +99,7 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 
 	body := `{ ` + wineries + `, ` + origins + ` }`
 
-	w.Header().Set("Content-Type", "application-json")
+	w.Header().Set("Content-Type", "application/wcms+json; version=1")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(body))
 }

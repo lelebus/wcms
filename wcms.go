@@ -65,8 +65,6 @@ func loadConfig(file string) Config {
 	decoder := json.NewDecoder(configFile)
 	decoder.Decode(&configuration)
 
-	// log.Println(configuration)
-
 	return configuration
 }
 

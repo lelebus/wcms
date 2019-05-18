@@ -41,16 +41,26 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 //
 //////////////////////////////////////////////////////////
 func getPurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len(URLPath):]
 
-	body, err := queryPurchase(selection)
+	id := r.FormValue("wine-id")
+	if id == "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
+
+	body, err := queryPurchase(id)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
+	if body == nil {
+		http.Error(w, http.StatusText(404), http.StatusNotFound)
+		log.Println("ERROR: purchases for given wine ID cannot be found")
+		return
+	}
 
-	w.Header().Set("Content-Type", "application-json")
+	w.Header().Set("Content-Type", "application/wcms+json; version=1")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
@@ -88,6 +98,9 @@ func queryPurchase(id string) ([]byte, error) {
 		purchase.Date = t.Format("02-01-2006")
 
 		purchases = append(purchases, purchase)
+	}
+	if len(purchases) == 0 {
+		return nil, nil
 	}
 
 	body, err := json.Marshal(purchases)
@@ -135,7 +148,7 @@ func createPurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	log.Printf("SUCCESSFUL import of purchase for \"%v\" on %v", purchase.Wine, purchase.Date)
 }
 
@@ -227,12 +240,17 @@ func insertPurchase(purchase Purchase) error {
 //
 ////////////////////////////////////////////////////////
 func deletePurchase(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len(URLPath):]
-	ids := strings.Split(selection, ":")
+
+	wine := r.FormValue("wine-id")
+	purchase := r.FormValue("purchase-id")
+	if wine == "" || purchase == "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
 
 	// delete purchase
 	query := `DELETE FROM purchase WHERE wine = $1 AND id = $2;`
-	_, err := DB.Exec(query, ids[0], ids[1])
+	_, err := DB.Exec(query, wine, purchase)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		err = errors.New("ERROR in deleting purchase: " + err.Error())
@@ -241,5 +259,5 @@ func deletePurchase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL delete ID: %v for Wine: %v\n", ids[1], ids[0])
+	log.Printf("SUCCESSFUL delete ID: %v for Wine: %v\n", purchase, wine)
 }

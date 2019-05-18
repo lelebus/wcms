@@ -48,7 +48,13 @@ func writeError(id string, message string, w http.ResponseWriter) {
 //
 //////////////////////////////////////////////////////////
 func getWine(w http.ResponseWriter, r *http.Request) {
+
 	selection := r.URL.Path[len(URLPath):]
+	id := r.FormValue("id")
+	if id == "" && selection != "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
 
 	var err error
 	var body []byte
@@ -59,8 +65,12 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	if body == nil {
+		http.Error(w, http.StatusText(404), http.StatusNotFound)
+		log.Println("ERROR: wine for given ID cannot be found")
+	}
 
-	w.Header().Set("Content-Type", "application-json")
+	w.Header().Set("Content-Type", "application/wcms+json; version=1")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
@@ -98,6 +108,9 @@ func queryWine(id string) ([]byte, error) {
 
 		wines = append(wines, wine)
 	}
+	if len(wines) == 0 {
+		return nil, nil
+	}
 
 	// marshal wines
 	body, err := json.Marshal(wines)
@@ -132,7 +145,7 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
@@ -333,7 +346,7 @@ func updateWine(w http.ResponseWriter, r *http.Request) {
 		log.Printf("SUCCESSFUL update: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func updateWineDB(wine Wine) error {
@@ -383,9 +396,13 @@ func updateWineDB(wine Wine) error {
 //
 //////////////////////////////////////////////////////////
 func deleteWine(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len(URLPath):]
+	id := r.FormValue("id")
+	if id == "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
 
-	err := deleteWineFromDB(selection)
+	err := deleteWineFromDB(id)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
@@ -393,7 +410,7 @@ func deleteWine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL delete ID: %v \n", selection)
+	log.Printf("SUCCESSFUL delete ID: %v \n", id)
 }
 
 func deleteWineFromDB(id string) error {

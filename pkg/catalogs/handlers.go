@@ -45,15 +45,20 @@ func CatalogHandler(w http.ResponseWriter, r *http.Request) {
 func getCatalog(w http.ResponseWriter, r *http.Request) {
 
 	selection := r.URL.Path[len(URLPath):]
+	id := r.FormValue("id")
+	if id == "" && selection != "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
 
 	var body []byte
 	var err error
 
 	query := `SELECT id, name, level, parent, type, size, year, territory, region, country, winery, wines, is_customized FROM catalog WHERE `
-	if selection == "" {
+	if id == "" {
 		query += `id <> 0;`
 	} else {
-		query += `id = ` + selection + ";"
+		query += `id = ` + id + ";"
 	}
 
 	body, err = queryCatalog(query)
@@ -62,8 +67,13 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	if body == nil && id != "" {
+		http.Error(w, http.StatusText(404), http.StatusNotFound)
+		log.Println("ERROR: catalog for given ID can not be found")
+		return
+	}
 
-	w.Header().Set("Content-Type", "application-json")
+	w.Header().Set("Content-Type", "application/wcms+json; version=1")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
@@ -91,8 +101,9 @@ func queryCatalog(query string) ([]byte, error) {
 
 		catalogs = append(catalogs, catalog)
 	}
-
-	log.Println(catalogs)
+	if len(catalogs) == 0 {
+		return nil, nil
+	}
 
 	// marshal wines
 	body, err := json.Marshal(catalogs)
@@ -160,7 +171,7 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 		log.Printf("SUCCESSFUL import: \"%v\"", catalog.Name)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
@@ -288,7 +299,7 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 		log.Printf("SUCCESSFUL update: \"%v\" \n", catalog.Name)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 //////////////////////////////////////////////////////////
@@ -297,9 +308,13 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 //
 ////////////////////////////////////////////////////////
 func deleteCatalog(w http.ResponseWriter, r *http.Request) {
-	selection := r.URL.Path[len(URLPath):]
+	id := r.FormValue("id")
+	if id == "" {
+		http.Error(w, http.StatusText(400), http.StatusBadRequest)
+		return
+	}
 
-	err := deleteFromDB(selection)
+	err := deleteFromDB(id)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
@@ -307,7 +322,7 @@ func deleteCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Printf("SUCCESSFUL delete ID: %v \n", selection)
+	log.Printf("SUCCESSFUL delete ID: %v \n", id)
 }
 
 func deleteFromDB(id string) error {
