@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS catalog (
 CREATE TABLE IF NOT EXISTS purchase (
   id int PRIMARY KEY,
   wine int NOT NULL references wine(id),
-  date timestamp NOT NULL, --'2016-06-22 19:10:25-07'
+  date timestamp NOT NULL, --'22-06-2006'
   supplier text,
   quantity integer NOT NULL,
-  cost money NOT NULL
+  cost float NOT NULL
 );
 
 INSERT INTO catalog (id, name, level, parent) VALUES (0, 'root', 0, 0);
