@@ -42,7 +42,7 @@ func PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 //////////////////////////////////////////////////////////
 func getPurchase(w http.ResponseWriter, r *http.Request) {
 
-	id := r.FormValue("wine-id")
+	id := r.FormValue("wine")
 	if id == "" {
 		http.Error(w, http.StatusText(400), http.StatusBadRequest)
 		return
@@ -241,8 +241,8 @@ func insertPurchase(purchase Purchase) error {
 ////////////////////////////////////////////////////////
 func deletePurchase(w http.ResponseWriter, r *http.Request) {
 
-	wine := r.FormValue("wine-id")
-	purchase := r.FormValue("purchase-id")
+	wine := r.FormValue("wine")
+	purchase := r.FormValue("purchase")
 	if wine == "" || purchase == "" {
 		http.Error(w, http.StatusText(400), http.StatusBadRequest)
 		return
