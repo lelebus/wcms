@@ -65,7 +65,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	if body == nil {
+	if body == nil && selection != "" {
 		http.Error(w, http.StatusText(404), http.StatusNotFound)
 		log.Println("ERROR: wine for given ID cannot be found")
 	}
