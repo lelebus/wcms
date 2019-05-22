@@ -7,6 +7,7 @@
     "@babel/polyfill": "^7.4.3",
     "axios": "^0.18.0",
     "bulma": "^0.7.4",
+    "lodash-es": "^4.17.11",
     "sass": "^1.19.0",
     "vue": "^2.6.10",
     "vue-axios": "^2.1.4",
