@@ -1,14 +1,20 @@
 package catalogs
 
 import (
+	wine "WCMS/pkg/wines"
+	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
 
-type origin struct {
-	territory string
-	region    string
-	country   string
+type Parameters struct {
+	Types       []string `json:"type"`
+	Sizes       []string `json:"size"`
+	Wineries    []string `json:"winery"`
+	Territories []string `json:"territory"`
+	Regions     []string `json:"regions"`
+	Countries   []string `json:"country"`
 }
 
 // URLPath for this API
@@ -25,53 +31,59 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var query string
+	var p Parameters
+	var err error
 
-	// get distinct origins
-	var arrayOrigins []origin
+	p.Types = wine.WineType
+	p.Sizes = wine.WineSize
 
-	query = `SELECT DISTINCT territory, region, country FROM wine;`
+	p.Wineries, err = getParameter("winery", "wine")
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	p.Territories, err = getParameter("territory", "wine")
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	p.Regions, err = getParameter("region", "wine")
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+	p.Countries, err = getParameter("country", "wine")
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	body, err := json.Marshal(p)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		err := "ERROR in marshaling parameters struct to json: " + err.Error()
+		log.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/wcms+json; version=1")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(body))
+}
+
+func getParameter(field, table string) ([]string, error) {
+	var array []string
+	var err error
+
+	query := `SELECT DISTINCT ` + field + ` FROM ` + table + `;`
 
 	rows, err := DB.Query(query)
 	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving origin entries from DB: " + err.Error())
-		return
-	}
-	defer rows.Close()
-
-	// read retrieved lines
-	for rows.Next() {
-		var row origin
-		err = rows.Scan(&row.territory, &row.region, &row.country)
-		if err != nil {
-			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-			log.Println("ERROR in scanning retrieved origin entries: " + err.Error())
-			return
-		}
-
-		arrayOrigins = append(arrayOrigins, row)
-	}
-
-	origins := `"origins": [`
-	for index, element := range arrayOrigins {
-		origins += `{ territory": "` + element.territory + `", "region": "` + element.region + `", "country": "` + element.country + `"}`
-		if index != (len(arrayOrigins) - 1) {
-			origins += `,`
-		}
-	}
-	origins += `]`
-
-	// get distinct wineries
-	var arrayWineries []string
-
-	query = `SELECT DISTINCT winery FROM wine;`
-
-	rows, err = DB.Query(query)
-	if err != nil {
-		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-		log.Println("ERROR in retrieving winery entries from DB: " + err.Error())
-		return
+		err := "ERROR in retrieving " + field + " entries from DB: " + err.Error()
+		return []string{}, errors.New(err)
 	}
 	defer rows.Close()
 
@@ -80,26 +92,12 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 		var row string
 		err = rows.Scan(&row)
 		if err != nil {
-			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-			log.Println("ERROR in scanning retrieved winery entries: " + err.Error())
-			return
+			err := "ERROR in scanning retrieved " + field + " entries: " + err.Error()
+			return []string{}, errors.New(err)
 		}
 
-		arrayWineries = append(arrayWineries, row)
+		array = append(array, row)
 	}
 
-	wineries := `"wineries": [`
-	for index, element := range arrayWineries {
-		wineries += `"` + element + `"`
-		if index != (len(arrayWineries) - 1) {
-			origins += `,`
-		}
-	}
-	wineries += `]`
-
-	body := `{ ` + wineries + `, ` + origins + ` }`
-
-	w.Header().Set("Content-Type", "application/wcms+json; version=1")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(body))
+	return array, nil
 }

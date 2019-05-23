@@ -14,8 +14,6 @@ import (
 	"github.com/lib/pq"
 )
 
-// i = server.DB
-
 var DB *sql.DB
 
 // URLPath for this API
@@ -61,16 +59,23 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 		query += `id = ` + id + ";"
 	}
 
-	body, err = queryCatalog(query)
+	catalogs, err := QueryCatalog(query)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
-	if body == nil && id != "" {
+	if len(catalogs) == 0 && id != "" {
 		http.Error(w, http.StatusText(404), http.StatusNotFound)
 		log.Println("ERROR: catalog for given ID can not be found")
 		return
+	}
+
+	body, err = json.Marshal(catalogs)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		err = errors.New("ERROR in marshaling catalog struct to json: " + err.Error())
+		log.Println(err)
 	}
 
 	w.Header().Set("Content-Type", "application/wcms+json; version=1")
@@ -78,7 +83,7 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func queryCatalog(query string) ([]byte, error) {
+func QueryCatalog(query string) ([]Catalog, error) {
 
 	//query database
 	rows, err := DB.Query(query)
@@ -101,18 +106,8 @@ func queryCatalog(query string) ([]byte, error) {
 
 		catalogs = append(catalogs, catalog)
 	}
-	if len(catalogs) == 0 {
-		return nil, nil
-	}
 
-	// marshal wines
-	body, err := json.Marshal(catalogs)
-	if err != nil {
-		err = errors.New("ERROR in marshaling catalog struct to json: " + err.Error())
-		return nil, err
-	}
-
-	return body, nil
+	return catalogs, nil
 }
 
 //////////////////////////////////////////////////////////

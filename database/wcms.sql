@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS wine (
   territory text,
   region text,
   country text NOT NULL,
-  price money NOT NULL,
+  price float NOT NULL,
   catalogs int[],
   details text,
   internal_notes text,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS catalog (
   country text[],
   winery text[],
   wines int[],
-  is_customized boolean
+  is_customized boolean NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS purchase (

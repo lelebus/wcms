@@ -36,10 +36,21 @@ func WineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type RequestError struct {
+	ErrorID string `json:"id"`
+	Message string `json:"message"`
+}
+
 // JSON response for request error
-func writeError(id string, message string, w http.ResponseWriter) {
-	var body = `{ "id":"` + id + `", "message":"` + message + `" }`
-	http.Error(w, body, 422)
+func writeError(w http.ResponseWriter, reqErr []RequestError) {
+	body, err := json.Marshal(reqErr)
+	if err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		err = errors.New("ERROR in marshaling wine struct to json: " + err.Error())
+		log.Println(err)
+	}
+
+	http.Error(w, string(body), 422)
 }
 
 //////////////////////////////////////////////////////////
@@ -65,7 +76,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	if body == nil {
+	if body == nil && selection != "" {
 		http.Error(w, http.StatusText(404), http.StatusNotFound)
 		log.Println("ERROR: wine for given ID cannot be found")
 	}
@@ -150,8 +161,6 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 
 func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 
-	// check correctness of request
-
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, http.StatusText(415), 415)
 		e := `ERROR in request-header "Content-Type" field: just "application/json" is accepted`
@@ -165,10 +174,10 @@ func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
 	}
 
 	for _, wine := range wines {
-		idError, err := checkWineParameter(wine)
-		if err != nil {
-			writeError(idError, err.Error(), w)
-			e := "ERROR in parameter checking: " + err.Error()
+		reqErr := checkWineParameter(wine)
+		if len(reqErr) != 0 {
+			writeError(w, reqErr)
+			e := "ERROR in parameter checking"
 			return nil, errors.New(e)
 		}
 	}
@@ -196,16 +205,31 @@ func readWineFromJSON(r *http.Request) ([]Wine, error) {
 }
 
 // Check that all parameters of a wine are accepted
-func checkWineParameter(wine Wine) (string, error) {
+func checkWineParameter(wine Wine) (reqErr []RequestError) {
+
+	if wine.StorageArea == "" {
+		e := "STORAGE for wine cannot be empty"
+		reqErr = append(reqErr, RequestError{"storage_area", e})
+	}
 
 	if !contains(WineType, strings.ToLower(wine.Type)) {
-		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine. Check line " + string(wine.ID)
-		return "type", errors.New(e)
+		e := "\"" + wine.Type + "\"" + " is not an accepted TYPE for wine"
+		reqErr = append(reqErr, RequestError{"type", e})
 	}
 
 	if !contains(WineSize, wine.Size) {
-		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator). Check line " + string(wine.ID)
-		return "size", errors.New(e)
+		e := "\"" + wine.Size + "\"" + " is not an accepted SIZE for wine (Use . as decimal separator)"
+		reqErr = append(reqErr, RequestError{"size", e})
+	}
+
+	if wine.Name == "" {
+		e := "Wine NAME cannot be empty"
+		reqErr = append(reqErr, RequestError{"name", e})
+	}
+
+	if wine.Winery == "" {
+		e := "Name of WINERY cannot be empty"
+		reqErr = append(reqErr, RequestError{"winery", e})
 	}
 
 	dt := time.Now()
@@ -214,26 +238,37 @@ func checkWineParameter(wine Wine) (string, error) {
 
 	productionYear, err := strconv.ParseInt(wine.Year, 10, 64)
 	if err != nil {
-		e := "YEAR of wine must be an integer. Check line " + string(wine.ID)
-		return "production_year", errors.New(e)
+		e := "YEAR of wine must be an integer"
+		reqErr = append(reqErr, RequestError{"production_year", e})
 	}
 	if productionYear > currentYear {
-		e := "YEAR of wine cannot be set in the future. Check line " + string(wine.ID)
-		return "production_year", errors.New(e)
+		e := "YEAR of wine cannot be set in the future"
+		reqErr = append(reqErr, RequestError{"production_year", e})
+	}
+
+	if wine.Region == "" && wine.Territory == "" {
+		e := "Either REGION or TERRITORY must be set"
+		reqErr = append(reqErr, RequestError{"region", e})
+		reqErr = append(reqErr, RequestError{"territory", e})
+	}
+
+	if wine.Country == "" {
+		e := "COUNTRY of wine cannot be empty"
+		reqErr = append(reqErr, RequestError{"country", e})
 	}
 
 	v, err := strconv.ParseFloat(wine.Price, 10)
 	if err != nil {
-		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator). Check line " + string(wine.ID)
-		return "price", errors.New(e)
+		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must have . as decimal separator)"
+		reqErr = append(reqErr, RequestError{"price", e})
 	}
 	if v < 0 {
-		err := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive). Check line " + string(wine.ID)
-		return "price", errors.New(err)
+		e := "\"" + wine.Price + "\"" + " is not an accepted PRICE for wine (Must be positive)"
+		reqErr = append(reqErr, RequestError{"price", e})
 	}
 
-	log.Printf("SUCCESSFUL parameter checking: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
-	return "", nil
+	log.Printf("COMPLETED parameter checking: \"%v BY %v - %v\"\n", wine.Name, wine.Winery, wine.Year)
+	return
 }
 
 // Insert wine in database, checking insertion in other catalogs

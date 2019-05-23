@@ -124,6 +124,7 @@ func main() {
 	http.HandleFunc(wine.URLPath, wine.WineHandler)
 	http.HandleFunc(purchase.URLPath, purchase.PurchaseHandler)
 	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
+	http.HandleFunc(catalog.GroupedPath, catalog.GetGroupedCatalogs)
 	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
 
