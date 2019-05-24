@@ -40,33 +40,6 @@ func init() {
 	initDB()
 }
 
-type Config struct {
-	Port string `json:"port"`
-	DB   struct {
-		Host     string `json:"host"`
-		Port     string `json:"port"`
-		Name     string `json:"name"`
-		User     string `json:"user"`
-		Password string `json:"password"`
-	} `json:"postgreSQL"`
-}
-
-func loadConfig(file string) Config {
-	var configuration Config
-
-	configFile, err := os.Open(file)
-	if err != nil {
-		log.Println(err.Error())
-		return Config{}
-	}
-	defer configFile.Close()
-
-	decoder := json.NewDecoder(configFile)
-	decoder.Decode(&configuration)
-
-	return configuration
-}
-
 func initDB() {
 	connection := "host=" + configuration.DB.Host + " port=" + configuration.DB.Port + " dbname=" + configuration.DB.Name +
 		" user=" + configuration.DB.User + " password=" + configuration.DB.Password + " sslmode=disable"
@@ -97,6 +70,33 @@ func initDB() {
 		err = errors.New("ERROR in initiating postgreSQL database:" + err.Error())
 		panic(err)
 	}
+}
+
+type Config struct {
+	Port string `json:"port"`
+	DB   struct {
+		Host     string `json:"host"`
+		Port     string `json:"port"`
+		Name     string `json:"name"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+	} `json:"postgreSQL"`
+}
+
+func loadConfig(file string) Config {
+	var configuration Config
+
+	configFile, err := os.Open(file)
+	if err != nil {
+		log.Println(err.Error())
+		return Config{}
+	}
+	defer configFile.Close()
+
+	decoder := json.NewDecoder(configFile)
+	decoder.Decode(&configuration)
+
+	return configuration
 }
 
 func serveJS(w http.ResponseWriter, r *http.Request) {

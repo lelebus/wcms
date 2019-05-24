@@ -70,7 +70,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var body []byte
 
-	body, err = queryWine(selection)
+	body, err = queryWine(id)
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
