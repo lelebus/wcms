@@ -41,4 +41,8 @@ CREATE TABLE IF NOT EXISTS purchase (
   cost float NOT NULL
 );
 
+DO $$ BEGIN
+IF NOT EXISTS (SELECT id FROM catalog WHERE id = 0) THEN
 INSERT INTO catalog (id, name, level, parent, is_customized) VALUES (0, 'root', 0, 0, true);
+END IF;
+END $$;
