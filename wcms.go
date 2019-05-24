@@ -37,8 +37,7 @@ func init() {
 	// HOW CAN I SET wrt ALSO FOR THE OTHER PACKAGES??
 	// CAN I CREATE DATABASE AUTOMATICALLY FROM HERE
 
-	connectDB()
-	// createDBTables()
+	initDB()
 }
 
 type Config struct {
@@ -68,7 +67,7 @@ func loadConfig(file string) Config {
 	return configuration
 }
 
-func connectDB() {
+func initDB() {
 	connection := "host=" + configuration.DB.Host + " port=" + configuration.DB.Port + " dbname=" + configuration.DB.Name +
 		" user=" + configuration.DB.User + " password=" + configuration.DB.Password + " sslmode=disable"
 
@@ -85,16 +84,13 @@ func connectDB() {
 	catalog.DB = db
 
 	log.Println("Successfully connected to database")
-}
 
-func createDBTables() {
-	file, err := ioutil.ReadFile("database/wcms.sql")
+	// Initiate DB
+	file, err := ioutil.ReadFile("db/init.sql")
 	if err != nil {
 		err = errors.New("ERROR in reading file for creating DB tables: " + err.Error())
 		panic(err)
 	}
-
-	log.Println(string(file))
 
 	_, err = db.Exec(string(file))
 	if err != nil {

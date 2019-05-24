@@ -19,12 +19,13 @@ Read [this file](ui/README.md) for a guide
 
 ### Configuration
 
-- start new server for postgres and connect to it
-- create postgres user
-- create database
-- give all privileges to the user (if it is not the owner)
-- setup __config.json__ file in the application folder:
-``` 
+- Start new server for postgres and connect to it
+- Create postgres user
+- Create database
+- Give all privileges to the user (if it is not the owner)
+- Setup __config.json__ file in the application folder:
+  
+``` json
 {
 	"port": "APPLICATION_PORT",
 	"postgreSQL": {
@@ -41,7 +42,8 @@ Read [this file](ui/README.md) for a guide
 
 - Lauch the application through the launch file **wcms**
 - Connect to the application through a web browser:
-_navigate to `locahost:APPLICATION_PORT/` if the application was lauched on the local machine_
+
+_navigate to `localhost:APPLICATION_PORT/` if the application was lauched on the local machine_
 
 ---
 

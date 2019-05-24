@@ -41,4 +41,4 @@ CREATE TABLE IF NOT EXISTS purchase (
   cost float NOT NULL
 );
 
-INSERT INTO catalog (id, name, level, parent) VALUES (0, 'root', 0, 0);
+INSERT INTO catalog (id, name, level, parent, is_customized) VALUES (0, 'root', 0, 0, true);
