@@ -132,7 +132,7 @@
 
 <script>
 import Multiselect from "vue-multiselect";
-import { get, has, pick } from "lodash-es";
+import { get, has, pick, reduce } from "lodash-es";
 
 export default {
   name: "Wine",
@@ -141,7 +141,7 @@ export default {
 
   props: {
     wine: {
-      type: String,
+      type: Number,
       default: undefined
     }
   },
@@ -243,9 +243,11 @@ export default {
         is_active: true
       };
 
+      this.errors = {};
+
       this.$http
         .get("/wines/", { params: { id: this.wine } })
-        .then(response => (this.config = response.data));
+        .then(response => (this.config = response.data[0]));
 
       this.$http.get("/catalogs/parameters/").then(response => {
         [
@@ -299,12 +301,18 @@ export default {
           params: { id: this.id },
           data: [this.config]
         })
-        .then(response => {
-          if (response.errors) {
-            this.errors = response.errors;
-          } else {
-            this.$parent.is_active = false;
-          }
+        .then(() => {
+          this.$parent.is_active = false;
+        })
+        .catch(error => {
+          this.errors = reduce(
+            error.response.data,
+            (errors, error) => {
+              errors[error.id] = error.message;
+              return errors;
+            },
+            {}
+          );
         });
     }
   }

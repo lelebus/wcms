@@ -9,12 +9,12 @@ import (
 )
 
 type Parameters struct {
-	Types       []string `json:"type"`
-	Sizes       []string `json:"size"`
-	Wineries    []string `json:"winery"`
-	Territories []string `json:"territory"`
+	Types       []string `json:"types"`
+	Sizes       []string `json:"sizes"`
+	Wineries    []string `json:"wineries"`
+	Territories []string `json:"territories"`
 	Regions     []string `json:"regions"`
-	Countries   []string `json:"country"`
+	Countries   []string `json:"countries"`
 }
 
 // URLPath for this API
@@ -75,8 +75,7 @@ func GetAllParameters(w http.ResponseWriter, r *http.Request) {
 }
 
 func getParameter(field, table string) ([]string, error) {
-	var array []string
-	var err error
+	array := []string{}
 
 	query := `SELECT DISTINCT ` + field + ` FROM ` + table + `;`
 
