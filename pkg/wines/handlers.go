@@ -122,7 +122,14 @@ func queryWine(id string) ([]byte, error) {
 	}
 
 	// marshal wines
-	body, err := json.Marshal(wines)
+	var body []byte
+
+	if id != "" {
+		body, err = json.Marshal(wines[0])
+	} else {
+		body, err = json.Marshal(wines)
+	}
+
 	if err != nil {
 		err = errors.New("ERROR in marshaling wine struct to json: " + err.Error())
 		return nil, err
@@ -329,12 +336,12 @@ func getMatchingIDs(wine Wine) ([]string, error) {
 	//query database
 	query := `
 	SELECT c.id FROM catalog c WHERE
-	( ARRAY[$1] <@ (c.type) OR c.type = '{}' ) AND 
-	( ARRAY[$2]::float[] <@ (c.size) OR c.size = '{}' ) AND 
-	( ARRAY[$3]::int[] <@ (c.year) OR c.year = '{}' ) AND 
-	( ARRAY[$4] <@ (c.territory) OR c.territory = '{}' ) AND 
-	( ARRAY[$5] <@ (c.region) OR c.region = '{}' ) AND 
-	( ARRAY[$6] <@ (c.country) OR c.country = '{}' ) AND 
+	( ARRAY[$1] <@ (c.type) OR c.type = '{}' ) AND
+	( ARRAY[$2]::float[] <@ (c.size) OR c.size = '{}' ) AND
+	( ARRAY[$3]::int[] <@ (c.year) OR c.year = '{}' ) AND
+	( ARRAY[$4] <@ (c.territory) OR c.territory = '{}' ) AND
+	( ARRAY[$5] <@ (c.region) OR c.region = '{}' ) AND
+	( ARRAY[$6] <@ (c.country) OR c.country = '{}' ) AND
 	( ARRAY[$7] <@ (c.winery) OR c.winery = '{}' );`
 
 	rows, err := DB.Query(query, wine.Type, wine.Size, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Winery)

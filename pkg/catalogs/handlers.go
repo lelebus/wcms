@@ -71,7 +71,12 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err = json.Marshal(catalogs)
+	if id != "" {
+		body, err = json.Marshal(catalogs[0])
+	} else {
+		body, err = json.Marshal(catalogs)
+	}
+
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		err = errors.New("ERROR in marshaling catalog struct to json: " + err.Error())
@@ -191,15 +196,15 @@ func getMatchingIDs(id int) ([]string, error) {
 
 	//query database
 	query := `
-			SELECT w.id FROM wine w, catalog c WHERE 
+			SELECT w.id FROM wine w, catalog c WHERE
 			c.id = $1 AND
-			c.is_customized = false AND 
-		  	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND 
-		  	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND 
-		  	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND 
-		  	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND 
-		  	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND 
-		  	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND 
+			c.is_customized = false AND
+		  	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND
+		  	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND
+		  	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND
+		  	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND
+		  	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND
+		  	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND
 			( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );`
 
 	rows, err := DB.Query(query, id)
