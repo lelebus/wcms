@@ -247,7 +247,7 @@ export default {
 
       this.$http
         .get("/wines/", { params: { id: this.wine } })
-        .then(response => (this.config = response.data[0]));
+        .then(response => (this.config = response.data));
 
       this.$http.get("/catalogs/parameters/").then(response => {
         [
@@ -303,6 +303,9 @@ export default {
         })
         .then(() => {
           this.$parent.is_active = false;
+          this.$http
+            .get("/wines/")
+            .then(response => (this.$parent.wines = response.data));
         })
         .catch(error => {
           this.errors = reduce(
