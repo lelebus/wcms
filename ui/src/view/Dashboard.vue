@@ -71,7 +71,7 @@ export default {
     open(id) {
       this.id = id;
       this.is_active = true;
-      this.$refs.wine.reset();
+      this.$nextTick(() => this.$refs.wine.reset());
     }
   }
 };
