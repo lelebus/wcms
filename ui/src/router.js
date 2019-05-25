@@ -26,14 +26,9 @@ export default new Router({
     },
 
     {
-      path: '/wine/:id',
-      component: () => import('./view/Wine'),
-    },
-
-    {
-      path: '/catalog/new',
-      name: 'create-catalog',
-      component: () => import('./view/CreateCatalog'),
+      path: '/catalog/dashboard',
+      name: 'catalog-dashboard',
+      component: () => import('./view/CatalogDashboard'),
     },
   ],
 });
