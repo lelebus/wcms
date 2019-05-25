@@ -150,18 +150,27 @@ func createWine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ids := []int{}
 	for _, wine := range wines {
-		err := insertWine(wine)
+		id, err := insertWine(wine)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Println(err)
 			return
 		}
-
+		ids = append(ids, id)
 		log.Printf("SUCCESSFUL import: \"%v BY %v - %v\" at line %v \n", wine.Name, wine.Winery, wine.Year, wine.ID)
 	}
 
+	var body []byte
+	if body, err = json.Marshal(ids); err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
+	w.Write(body)
 }
 
 func checkWineRequest(w http.ResponseWriter, r *http.Request) ([]Wine, error) {
@@ -284,12 +293,12 @@ func checkWineParameter(wine Wine) map[string]string {
 }
 
 // Insert wine in database, checking insertion in other catalogs
-func insertWine(wine Wine) error {
+func insertWine(wine Wine) (int, error) {
 	log.Println(wine)
 	// get catalogs matching wine's parameters
 	catalogs, err := getMatchingIDs(wine)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	wine.Catalogs = append(wine.Catalogs, catalogs...)
@@ -305,7 +314,7 @@ func insertWine(wine Wine) error {
 		_, err = DB.Exec(query, wine.ID, wine.StorageArea, wine.Type, wine.Size, wine.Name, wine.Winery, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Price, pq.Array(wine.Catalogs), wine.Details, wine.InternalNotes)
 		if err != nil {
 			err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
-			return errors.New(err)
+			return -1, errors.New(err)
 		}
 	} else {
 		query = `
@@ -317,7 +326,7 @@ func insertWine(wine Wine) error {
 		err := result.Scan(&wine.ID)
 		if err != nil {
 			err := "ERROR inserting wine \"" + wine.Name + "\" in DB: " + err.Error()
-			return errors.New(err)
+			return -1, errors.New(err)
 		}
 
 	}
@@ -330,10 +339,10 @@ func insertWine(wine Wine) error {
 		err := "ERROR inserting wine \"" + wine.Name + "\" in catalogs: " + err.Error()
 		id := strconv.Itoa(wine.ID)
 		deleteWineFromDB(id)
-		return errors.New(err)
+		return -1, errors.New(err)
 	}
 
-	return nil
+	return wine.ID, nil
 }
 
 func getMatchingIDs(wine Wine) ([]string, error) {
@@ -430,7 +439,7 @@ func updateWineDB(wine Wine) error {
 		return err
 	}
 
-	err = insertWine(wine)
+	_, err = insertWine(wine)
 	if err != nil {
 		return err
 	}
