@@ -239,7 +239,10 @@ func checkWineParameter(wine Wine) map[string]string {
 		reqErr["winery"] = e
 	}
 
-	if wine.Year != "" {
+	if wine.Year == "" {
+		e := "YEAR of wine must be an integer"
+		reqErr["year"] = e
+	} else {
 		dt := time.Now()
 		today := dt.Format("02-01-2006")
 		currentYear, _ := strconv.ParseInt(today[6:], 10, 64)
@@ -247,11 +250,11 @@ func checkWineParameter(wine Wine) map[string]string {
 		productionYear, err := strconv.ParseInt(wine.Year, 10, 64)
 		if err != nil {
 			e := "YEAR of wine must be an integer"
-			reqErr["production_year"] = e
+			reqErr["year"] = e
 		}
 		if productionYear > currentYear {
 			e := "YEAR of wine cannot be set in the future"
-			reqErr["production_year"] = e
+			reqErr["year"] = e
 		}
 	}
 
@@ -282,6 +285,7 @@ func checkWineParameter(wine Wine) map[string]string {
 
 // Insert wine in database, checking insertion in other catalogs
 func insertWine(wine Wine) error {
+	log.Println(wine)
 	// get catalogs matching wine's parameters
 	catalogs, err := getMatchingIDs(wine)
 	if err != nil {
