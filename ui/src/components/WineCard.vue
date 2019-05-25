@@ -1,5 +1,5 @@
 <template lang="pug">
-  .box
+  .box.wine-card
     h5.title.is-5 {{ wine.name }}
     h6.subtitle.is-6 {{ wine.winery || "Unknown" }}, {{ wine.year }}
     .field.is-grouped.is-grouped-multiline
@@ -14,7 +14,7 @@
     .tags(v-if="wine.catalog.length")
       span.tag.is-info Catalogs
       span.tag(v-for="id in wine.catalog" :key="id")
-        | {{ (catalogs.find(catalog => catalog.id === id) || {}).name }}
+        | {{ getCatalogPath(id) }}
 </template>
 
 <script>
@@ -43,6 +43,29 @@ export default {
       { label: "Region", field: "region" },
       { label: "Country", field: "country" }
     ]
-  })
+  }),
+
+  methods: {
+    getCatalogPath(id) {
+      let catalog = this.catalogs.find(catalog => catalog.id === id);
+
+      if (catalog) {
+        if (catalog.parent) {
+          return `${this.getCatalogPath(catalog.parent)} / ${catalog.name}`;
+        } else {
+          return catalog.name;
+        }
+      } else {
+        return "Unknown";
+      }
+    }
+  }
 };
 </script>
+
+<style lang="stylus">
+.wine-card {
+  height: 100%;
+  cursor: pointer;
+}
+</style>

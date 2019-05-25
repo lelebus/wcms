@@ -20,8 +20,10 @@
       .modal-content
         .box
           Editor(
+            ref="editor"
             :wine="wine"
-            :parameters="params"
+            :parameters="parameters"
+            :catalogs="catalogs.filter(catalog => catalog.Customized)"
             :errors="errors"
             @save="save"
             @delete="remove"
@@ -53,12 +55,6 @@ export default {
   computed: {
     wine() {
       return find(this.wines, ["id", this.id]);
-    },
-
-    params() {
-      return merge(this.parameters, {
-        catalogs: this.catalogs.filter(catalog => catalog.Customized)
-      });
     }
   },
 
@@ -77,7 +73,8 @@ export default {
   methods: {
     open(wine) {
       this.id = wine.id;
-      this.is_modal_open = true;
+      this.$refs.editor.reset();
+      this.$nextTick(() => (this.is_modal_open = true));
     },
 
     save(wine) {
@@ -129,7 +126,6 @@ export default {
 <style lang="stylus">
 #dashboard .columns .column .box {
   height: 100%;
-  cursor: pointer;
 
   & .columns {
     height: 100%;

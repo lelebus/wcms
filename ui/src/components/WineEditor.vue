@@ -104,7 +104,7 @@
       label.label Catalogs
       multiselect(
         v-model="catalog"
-        :options="catalogs"
+        :options="catalog_list"
         :multiple="true"
         label="name"
         track-by="id"
@@ -131,7 +131,7 @@
 
 <script>
 import Multiselect from "vue-multiselect";
-import { get, has, pick, merge, reduce } from "lodash-es";
+import { get, has, pick, merge } from "lodash-es";
 
 export default {
   name: "WineEditor",
@@ -142,6 +142,11 @@ export default {
     parameters: {
       type: Object,
       default: () => ({})
+    },
+
+    catalogs: {
+      type: Array,
+      default: () => []
     },
 
     wine: {
@@ -177,29 +182,32 @@ export default {
     wineries: [],
     territories: [],
     regions: [],
-    countries: [],
-    catalogs: []
+    countries: []
   }),
 
   computed: {
     config: {
       get() {
-        return pick(this, [
-          "id",
-          "name",
-          "type",
-          "size",
-          "year",
-          "storage_area",
-          "winery",
-          "territory",
-          "region",
-          "country",
-          "price",
-          "catalog",
-          "details",
-          "internal_notes"
-        ]);
+        return merge(
+          pick(this, [
+            "id",
+            "name",
+            "type",
+            "size",
+            "year",
+            "storage_area",
+            "winery",
+            "territory",
+            "region",
+            "country",
+            "price",
+            "details",
+            "internal_notes"
+          ]),
+          {
+            catalog: this.catalog.map(catalog => catalog.id)
+          }
+        );
       },
 
       set(config) {
@@ -215,7 +223,6 @@ export default {
           "region",
           "country",
           "price",
-          "catalog",
           "details",
           "internal_notes"
         ].forEach(field => {
@@ -223,7 +230,21 @@ export default {
             this[field] = config[field];
           }
         });
+
+        if (config.catalog) {
+          this.catalog = config.catalog.map(id =>
+            this.catalog_list.find(c => c.id === id)
+          );
+        }
       }
+    },
+
+    catalog_list() {
+      return this.catalogs.map(catalog => ({
+        id: catalog.id,
+        parent: catalog.parent,
+        name: this.getCatalogPath(catalog.id)
+      }));
     }
   },
 
@@ -257,8 +278,7 @@ export default {
         "wineries",
         "territories",
         "regions",
-        "countries",
-        "catalogs"
+        "countries"
       ].forEach(field => {
         this[field] = get(parameters, field, []);
       });
@@ -266,6 +286,28 @@ export default {
   },
 
   methods: {
+    reset() {
+      this.config = merge(
+        {
+          id: undefined,
+          name: undefined,
+          type: undefined,
+          size: undefined,
+          year: undefined,
+          storage_area: undefined,
+          winery: undefined,
+          territory: undefined,
+          region: undefined,
+          country: undefined,
+          price: undefined,
+          catalog: [],
+          details: undefined,
+          internal_notes: undefined
+        },
+        this.wine
+      );
+    },
+
     addTag(source, value) {
       switch (source) {
         case "winery":
@@ -287,41 +329,18 @@ export default {
       }
     },
 
-    save() {
-      this.$http
-        .request({
-          url: "/wines/",
-          method: this.id ? "patch" : "post",
-          params: { id: this.id },
-          data: [this.config]
-        })
-        .then(() => {
-          this.$parent.is_active = false;
-          this.$http
-            .get("/wines/")
-            .then(response => (this.$parent.wines = response.data));
-        })
-        .catch(error => {
-          this.errors = reduce(
-            error.response.data,
-            (errors, error) => {
-              errors[error.id] = error.message;
-              return errors;
-            },
-            {}
-          );
-        });
-    },
+    getCatalogPath(id) {
+      let catalog = this.catalogs.find(catalog => catalog.id === id);
 
-    delete_() {
-      this.$http
-        .request({ url: "/wines/", method: "delete", params: { id: this.id } })
-        .then(() => {
-          this.$parent.is_active = false;
-          this.$http
-            .get("/wines/")
-            .then(response => (this.$parent.wines = response.data));
-        });
+      if (catalog) {
+        if (catalog.parent) {
+          return `${this.getCatalogPath(catalog.parent)} / ${catalog.name}`;
+        } else {
+          return catalog.name;
+        }
+      } else {
+        return "Unknown";
+      }
     }
   }
 };
