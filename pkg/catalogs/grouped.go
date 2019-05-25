@@ -43,7 +43,7 @@ func GetGroupedCatalogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get top level catalogs
-	var topCatalogs []Catalog
+	topCatalogs := []Catalog{}
 	for _, catalog := range catalogs {
 		if catalog.Parent == 0 {
 			topCatalogs = append(topCatalogs, catalog)
