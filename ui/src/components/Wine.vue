@@ -124,14 +124,14 @@
 
     .field.is-grouped
       .control
-        button.button.is-primary(@click="save") Save
+        button.button.is-primary(@click="$emit('save', config)") Save
       .control(v-if="id")
-        button.button.is-danger(@click="delete_") Delete
+        button.button.is-danger(@click="$emit('delete')") Delete
 </template>
 
 <script>
 import Multiselect from "vue-multiselect";
-import { get, has, pick, reduce } from "lodash-es";
+import { get, has, pick, merge, reduce } from "lodash-es";
 
 export default {
   name: "Wine",
@@ -139,9 +139,19 @@ export default {
   components: { Multiselect },
 
   props: {
+    parameters: {
+      type: Object,
+      default: () => ({})
+    },
+
     wine: {
-      type: Number,
-      default: undefined
+      type: Object,
+      default: () => ({})
+    },
+
+    errors: {
+      type: Object,
+      default: () => ({})
     }
   },
 
@@ -161,7 +171,6 @@ export default {
     catalog: [],
     details: undefined,
     internal_notes: undefined,
-    is_active: true,
 
     types: [],
     sizes: [],
@@ -169,9 +178,7 @@ export default {
     territories: [],
     regions: [],
     countries: [],
-    catalogs: [],
-
-    errors: {}
+    catalogs: []
   }),
 
   computed: {
@@ -191,8 +198,7 @@ export default {
           "price",
           "catalog",
           "details",
-          "internal_notes",
-          "is_active"
+          "internal_notes"
         ]);
       },
 
@@ -211,8 +217,7 @@ export default {
           "price",
           "catalog",
           "details",
-          "internal_notes",
-          "is_active"
+          "internal_notes"
         ].forEach(field => {
           if (has(config, field)) {
             this[field] = config[field];
@@ -222,54 +227,45 @@ export default {
     }
   },
 
-  methods: {
-    reset() {
-      this.config = {
-        id: undefined,
-        name: undefined,
-        type: undefined,
-        size: undefined,
-        year: undefined,
-        storage_area: undefined,
-        winery: undefined,
-        territory: undefined,
-        region: undefined,
-        country: undefined,
-        price: undefined,
-        catalog: [],
-        details: undefined,
-        internal_notes: undefined
-      };
-
-      this.errors = {};
-
-      this.$http
-        .get("/wines/", { params: { id: this.wine } })
-        .then(response => (this.config = response.data));
-
-      this.$http.get("/catalogs/parameters/").then(response => {
-        [
-          "types",
-          "sizes",
-          "wineries",
-          "territories",
-          "regions",
-          "countries"
-        ].forEach(field => {
-          this[field] = get(response.data, field, []);
-        });
-      });
-
-      this.$http
-        .get("/catalogs/")
-        .then(
-          response =>
-            (this.catalogs = response.data.filter(
-              catalog => !catalog.Customized
-            ))
-        );
+  watch: {
+    wine(wine) {
+      this.config = merge(
+        {
+          id: undefined,
+          name: undefined,
+          type: undefined,
+          size: undefined,
+          year: undefined,
+          storage_area: undefined,
+          winery: undefined,
+          territory: undefined,
+          region: undefined,
+          country: undefined,
+          price: undefined,
+          catalog: [],
+          details: undefined,
+          internal_notes: undefined
+        },
+        wine
+      );
     },
 
+    parameters(parameters) {
+      [
+        "types",
+        "sizes",
+        "wineries",
+        "territories",
+        "regions",
+        "countries",
+        "catalogs"
+      ].forEach(field => {
+        this[field] = get(parameters, field, []);
+      });
+    }
+  },
+
+  methods: {
     addTag(source, value) {
       switch (source) {
         case "winery":
