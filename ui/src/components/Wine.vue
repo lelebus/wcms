@@ -122,12 +122,11 @@
       .control
         textarea.textarea(v-model="internal_notes")
 
-    .field
-      label.checkbox.is-block
-        input(v-model="is_active" type="checkbox")
-        |  Is active
-
-    button.button.is-primary(@click="save") Save
+    .field.is-grouped
+      .control
+        button.button.is-primary(@click="save") Save
+      .control(v-if="id")
+        button.button.is-danger(@click="delete_") Delete
 </template>
 
 <script>
@@ -239,8 +238,7 @@ export default {
         price: undefined,
         catalog: [],
         details: undefined,
-        internal_notes: undefined,
-        is_active: true
+        internal_notes: undefined
       };
 
       this.errors = {};
@@ -316,6 +314,17 @@ export default {
             },
             {}
           );
+        });
+    },
+
+    delete_() {
+      this.$http
+        .request({ url: "/wines/", method: "delete", params: { id: this.id } })
+        .then(() => {
+          this.$parent.is_active = false;
+          this.$http
+            .get("/wines/")
+            .then(response => (this.$parent.wines = response.data));
         });
     }
   }
