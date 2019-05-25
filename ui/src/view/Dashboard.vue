@@ -9,28 +9,17 @@
               i.fas.fa-3x.fa-plus-circle
 
       .column.is-one-third(v-for="wine in wines" :key="wine.id")
-        .box(@click="open(wine)")
-          h5.title.is-5 {{ wine.name }}
-          h6.subtitle.is-6 {{ wine.winery || "Unknown" }}, {{ wine.year }}
-          .field.is-grouped.is-grouped-multiline
-            .control(
-              v-for="{label, field, prefix} in tags"
-              v-if="wine[field]"
-              :key="field"
-            )
-              .tags.has-addons
-                span.tag {{ label }}
-                span.tag.is-primary {{ prefix }}{{ wine[field] }}
-          .tags(v-if="wine.catalog.length")
-            span.tag.is-info Catalogs
-            span.tag(v-for="id in wine.catalog" :key="id")
-              | {{ (catalogs.find(catalog => catalog.id === id) || {}).name }}
+        Card(
+          :wine="wine"
+          :catalogs="catalogs"
+          @click.native="open(wine)"
+        )
 
     .modal(:class="{'is-active': is_modal_open}")
       .modal-background(@click="is_modal_open = false")
       .modal-content
         .box
-          wine(
+          Editor(
             :wine="wine"
             :parameters="params"
             :errors="errors"
@@ -41,27 +30,18 @@
 </template>
 
 <script>
-import Wine from "../components/Wine";
+import Card from "../components/WineCard";
+import Editor from "../components/WineEditor";
 import { find, merge } from "lodash-es";
 
 export default {
   name: "Dashboard",
 
-  components: { Wine },
+  components: { Card, Editor },
 
   data: () => ({
     id: undefined,
     is_modal_open: false,
-
-    tags: [
-      { label: "Type", field: "type" },
-      { label: "Size", field: "size" },
-      { label: "Price", field: "price", prefix: "$" },
-      { label: "Storage", field: "storage_area" },
-      { label: "Territory", field: "territory" },
-      { label: "Region", field: "region" },
-      { label: "Country", field: "country" }
-    ],
 
     wines: [],
     catalogs: [],

@@ -134,7 +134,7 @@ import Multiselect from "vue-multiselect";
 import { get, has, pick, merge, reduce } from "lodash-es";
 
 export default {
-  name: "Wine",
+  name: "WineEditor",
 
   components: { Multiselect },
 
