@@ -68,4 +68,8 @@ export default {
   height: 100%;
   cursor: pointer;
 }
+
+.wine-card.is-danger {
+  box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1), 0 0 0 1px rgba(255, 56, 96, 0.4);
+}
 </style>
