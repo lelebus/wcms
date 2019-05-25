@@ -117,7 +117,8 @@ func queryWine(id string) ([]byte, error) {
 
 		wines = append(wines, wine)
 	}
-	if len(wines) == 0 {
+
+	if id != "" && len(wines) == 0 {
 		return nil, errors.New("404")
 	}
 
