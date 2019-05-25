@@ -85,16 +85,15 @@ export default {
           params: { id: this.id },
           data: [wine]
         })
-        .then(() => {
+        .then(response => {
           this.is_modal_open = false;
 
           if (this.id) {
             let index = this.wines.findIndex(wine => wine.id === this.id);
             this.wines[index] = wine;
           } else {
-            this.$http
-              .get("/wines/")
-              .then(response => (this.wines = response.data));
+            wine.id = response.data[0];
+            this.wines.push(wine);
           }
 
           this.$http
