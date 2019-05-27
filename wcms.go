@@ -99,16 +99,6 @@ func loadConfig(file string) Config {
 	return configuration
 }
 
-func serveJS(w http.ResponseWriter, r *http.Request) {
-	filepath := "static/" + r.URL.Path[1:]
-	_, err := os.Stat(filepath)
-	if os.IsNotExist(err) {
-		filepath = "static/index.html"
-	}
-	http.ServeFile(w, r, filepath)
-	log.Printf(`SERVING "%v" for requested path: "%v"`, filepath, r.URL.Path)
-}
-
 //////////////////////////////////////////////////////////
 //
 // Start SERVER for REQUEST handling
@@ -123,6 +113,21 @@ func main() {
 	http.HandleFunc(catalog.GroupedPath, catalog.GetGroupedCatalogs)
 	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
 	http.HandleFunc("/", serveJS)
+	http.HandleFunc("/favicon.ico", serveFavicon)
 
 	http.ListenAndServe(port, nil)
+}
+
+func serveFavicon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "favicon.ico")
+}
+
+func serveJS(w http.ResponseWriter, r *http.Request) {
+	filepath := "static/" + r.URL.Path[1:]
+	_, err := os.Stat(filepath)
+	if os.IsNotExist(err) {
+		filepath = "static/index.html"
+	}
+	http.ServeFile(w, r, filepath)
+	log.Printf(`SERVING "%v" for requested path: "%v"`, filepath, r.URL.Path)
 }

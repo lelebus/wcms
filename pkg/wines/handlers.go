@@ -332,7 +332,7 @@ func insertWine(wine Wine) error {
 	return nil
 }
 
-func getMatchingIDs(wine Wine) ([]string, error) {
+func getMatchingIDs(wine Wine) ([]int, error) {
 	//query database
 	query := `
 	SELECT c.id FROM catalog c WHERE
@@ -352,9 +352,9 @@ func getMatchingIDs(wine Wine) ([]string, error) {
 	defer rows.Close()
 
 	// read retrieved lines
-	array := make([]string, 0)
+	array := make([]int, 0)
 	for rows.Next() {
-		var id string
+		var id int
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
@@ -405,9 +405,9 @@ func updateWineDB(wine Wine) error {
 	defer rows.Close()
 
 	// read retrieved lines
-	catalogs := make([]string, 0)
+	catalogs := make([]int, 0)
 	for rows.Next() {
-		var id string
+		var id int
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved catalog ids: " + err.Error())

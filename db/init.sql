@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS catalog (
   id SERIAL PRIMARY KEY,
   name text NOT NULL UNIQUE,
   level int NOT NULL,
-  parent int references catalog(id),
+  parent int references catalog(id) ON DELETE CASCADE,
   type text[],
   size float[],
   year int[],
