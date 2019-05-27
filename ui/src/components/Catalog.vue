@@ -223,9 +223,13 @@ export default {
       return this.wines.filter(w => !this.wineIds.includes(w.id));
     },
 
+    Customized() {
+      return this.customized;
+    },
+
     config: {
       get() {
-        var fields = ["level", "parent", "name"];
+        var fields = ["level", "parent", "name", "Customized"];
 
         if (this.id > 0) {
           fields = fields.concat(["id"]);
@@ -237,7 +241,7 @@ export default {
 
         if (this.customized) {
           return merge(pick(this, fields), {
-            wines: this.winesIds
+            wines: this.wineIds
           });
         } else {
           return pick(
