@@ -34,7 +34,6 @@
 <script>
 import Card from "../components/WineCard";
 import Editor from "../components/WineEditor";
-import { find, merge } from "lodash-es";
 
 export default {
   name: "Dashboard",
@@ -54,7 +53,7 @@ export default {
 
   computed: {
     wine() {
-      return find(this.wines, ["id", this.id]);
+      return this.wines.find(w => w.id === this.id);
     }
   },
 

@@ -1,9 +1,9 @@
 package catalogs
 
 type Catalog struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Level      int
+	ID         int       `json:"id"`
+	Name       string    `json:"name"`
+	Level      int       `json:"level"`
 	Parent     int       `json:"parent"`
 	Type       []string  `json:"type"`
 	Size       []string  `json:"size"`
