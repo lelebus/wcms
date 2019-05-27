@@ -5,7 +5,8 @@
         router-link.navbar-item(
           to="/"
           @click.native="navbar_expanded = false"
-        ) WCMS
+        )
+          img(src="../static/logo.jpg" style="height:50px;max-height:initial;")
         a.navbar-burger.burger(
           :class="{'is-active': navbar_expanded}"
           @click="navbar_expanded = !navbar_expanded"
