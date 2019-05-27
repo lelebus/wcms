@@ -104,7 +104,7 @@
       label.label Catalogs
       multiselect(
         v-model="catalog"
-        :options="catalogs"
+        :options="catalog_list"
         :multiple="true"
         label="name"
         track-by="id"
@@ -122,27 +122,41 @@
       .control
         textarea.textarea(v-model="internal_notes")
 
-    .field
-      label.checkbox.is-block
-        input(v-model="is_active" type="checkbox")
-        |  Is active
-
-    button.button.is-primary(@click="save") Save
+    .field.is-grouped
+      .control
+        button.button.is-primary(@click="$emit('save', config)") Save
+      .control(v-if="id")
+        button.button.is-danger(@click="$emit('delete')") Delete
 </template>
 
 <script>
 import Multiselect from "vue-multiselect";
-import { get, has, pick, reduce } from "lodash-es";
+import { get, has, pick, merge } from "lodash-es";
 
 export default {
-  name: "Wine",
+  name: "WineEditor",
 
   components: { Multiselect },
 
   props: {
+    parameters: {
+      type: Object,
+      default: () => ({})
+    },
+
+    catalogs: {
+      type: Array,
+      default: () => []
+    },
+
     wine: {
-      type: Number,
-      default: undefined
+      type: Object,
+      default: () => ({})
+    },
+
+    errors: {
+      type: Object,
+      default: () => ({})
     }
   },
 
@@ -162,39 +176,38 @@ export default {
     catalog: [],
     details: undefined,
     internal_notes: undefined,
-    is_active: true,
 
     types: [],
     sizes: [],
     wineries: [],
     territories: [],
     regions: [],
-    countries: [],
-    catalogs: [],
-
-    errors: {}
+    countries: []
   }),
 
   computed: {
     config: {
       get() {
-        return pick(this, [
-          "id",
-          "name",
-          "type",
-          "size",
-          "year",
-          "storage_area",
-          "winery",
-          "territory",
-          "region",
-          "country",
-          "price",
-          "catalog",
-          "details",
-          "internal_notes",
-          "is_active"
-        ]);
+        return merge(
+          pick(this, [
+            "id",
+            "name",
+            "type",
+            "size",
+            "year",
+            "storage_area",
+            "winery",
+            "territory",
+            "region",
+            "country",
+            "price",
+            "details",
+            "internal_notes"
+          ]),
+          {
+            catalog: this.catalog.map(catalog => catalog.id)
+          }
+        );
       },
 
       set(config) {
@@ -210,66 +223,89 @@ export default {
           "region",
           "country",
           "price",
-          "catalog",
           "details",
-          "internal_notes",
-          "is_active"
+          "internal_notes"
         ].forEach(field => {
           if (has(config, field)) {
             this[field] = config[field];
           }
         });
+
+        if (config.catalog) {
+          this.catalog = config.catalog.map(id =>
+            this.catalog_list.find(c => c.id === id)
+          );
+        }
       }
+    },
+
+    catalog_list() {
+      return this.catalogs.map(catalog => ({
+        id: catalog.id,
+        parent: catalog.parent,
+        name: this.getCatalogPath(catalog.id)
+      }));
+    }
+  },
+
+  watch: {
+    wine(wine) {
+      this.config = merge(
+        {
+          id: undefined,
+          name: undefined,
+          type: undefined,
+          size: undefined,
+          year: undefined,
+          storage_area: undefined,
+          winery: undefined,
+          territory: undefined,
+          region: undefined,
+          country: undefined,
+          price: undefined,
+          catalog: [],
+          details: undefined,
+          internal_notes: undefined
+        },
+        wine
+      );
+    },
+
+    parameters(parameters) {
+      [
+        "types",
+        "sizes",
+        "wineries",
+        "territories",
+        "regions",
+        "countries"
+      ].forEach(field => {
+        this[field] = get(parameters, field, []);
+      });
     }
   },
 
   methods: {
     reset() {
-      this.config = {
-        id: undefined,
-        name: undefined,
-        type: undefined,
-        size: undefined,
-        year: undefined,
-        storage_area: undefined,
-        winery: undefined,
-        territory: undefined,
-        region: undefined,
-        country: undefined,
-        price: undefined,
-        catalog: [],
-        details: undefined,
-        internal_notes: undefined,
-        is_active: true
-      };
-
-      this.errors = {};
-
-      this.$http
-        .get("/wines/", { params: { id: this.wine } })
-        .then(response => (this.config = response.data));
-
-      this.$http.get("/catalogs/parameters/").then(response => {
-        [
-          "types",
-          "sizes",
-          "wineries",
-          "territories",
-          "regions",
-          "countries"
-        ].forEach(field => {
-          this[field] = get(response.data, field, []);
-        });
-      });
-
-      this.$http
-        .get("/catalogs/")
-        .then(
-          response =>
-            (this.catalogs = response.data.filter(
-              catalog => !catalog.Customized
-            ))
-        );
+      this.config = merge(
+        {
+          id: undefined,
+          name: undefined,
+          type: undefined,
+          size: undefined,
+          year: undefined,
+          storage_area: undefined,
+          winery: undefined,
+          territory: undefined,
+          region: undefined,
+          country: undefined,
+          price: undefined,
+          catalog: [],
+          details: undefined,
+          internal_notes: undefined
+        },
+        this.wine
+      );
     },
 
     addTag(source, value) {
@@ -293,30 +329,18 @@ export default {
       }
     },
 
-    save() {
-      this.$http
-        .request({
-          url: "/wines/",
-          method: this.id ? "patch" : "post",
-          params: { id: this.id },
-          data: [this.config]
-        })
-        .then(() => {
-          this.$parent.is_active = false;
-          this.$http
-            .get("/wines/")
-            .then(response => (this.$parent.wines = response.data));
-        })
-        .catch(error => {
-          this.errors = reduce(
-            error.response.data,
-            (errors, error) => {
-              errors[error.id] = error.message;
-              return errors;
-            },
-            {}
-          );
-        });
+    getCatalogPath(id) {
+      let catalog = this.catalogs.find(catalog => catalog.id === id);
+
+      if (catalog) {
+        if (catalog.parent) {
+          return `${this.getCatalogPath(catalog.parent)} / ${catalog.name}`;
+        } else {
+          return catalog.name;
+        }
+      } else {
+        return "Unknown";
+      }
     }
   }
 };

@@ -123,7 +123,7 @@ func QueryCatalog(query string) ([]Catalog, error) {
 func createCatalog(w http.ResponseWriter, r *http.Request) {
 
 	// check correctness of request
-	if r.Header.Get("Content-Type") != "application/json" {
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "", 415)
 		log.Println(`ERROR in request-header "Content-Type" field: just "application/json" is accepted`)
 		return
@@ -135,6 +135,7 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
+	ids := []int{}
 	for _, catalog := range catalogs {
 		if catalog.Level == 0 {
 			catalog.Parent = 0
@@ -161,17 +162,27 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 			catalog.Wines = wines
 		}
 
-		err = insertCatalog(catalog)
+		id, err := insertCatalog(catalog)
 		if err != nil {
 			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 			log.Println(err)
 			return
 		}
 
+		ids = append(ids, id)
+
 		log.Printf("SUCCESSFUL import: \"%v\"", catalog.Name)
 	}
 
+	var body []byte
+	if body, err = json.Marshal(ids); err != nil {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
+	w.Write(body)
 }
 
 func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
@@ -229,7 +240,7 @@ func getMatchingIDs(id int) ([]string, error) {
 	return array, nil
 }
 
-func insertCatalog(catalog Catalog) error {
+func insertCatalog(catalog Catalog) (int, error) {
 	var query string
 	var err error
 
@@ -242,7 +253,7 @@ func insertCatalog(catalog Catalog) error {
 	err = result.Scan(&catalog.ID)
 	if err != nil {
 		err := "ERROR inserting catalog \"" + catalog.Name + "\"in DB: " + err.Error()
-		return errors.New(err)
+		return -1, errors.New(err)
 	}
 
 	// insert catalog id in matching wines
@@ -253,10 +264,10 @@ func insertCatalog(catalog Catalog) error {
 		err := "ERROR inserting catalog \"" + catalog.Name + "\" reference in wines: " + err.Error()
 		id := strconv.Itoa(catalog.ID)
 		deleteFromDB(id)
-		return errors.New(err)
+		return -1, errors.New(err)
 	}
 
-	return nil
+	return catalog.ID, nil
 }
 
 //////////////////////////////////////////////////////////

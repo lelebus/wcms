@@ -3,75 +3,119 @@
     .columns.is-multiline
 
       .column.is-one-third
-        .box(@click="open(undefined)")
+        .box(@click="open({})")
           .columns.is-centered.is-vcentered.is-mobile
             span.icon.is-large.has-text-primary
               i.fas.fa-3x.fa-plus-circle
 
       .column.is-one-third(v-for="wine in wines" :key="wine.id")
-        .box(@click="open(wine.id)")
-          h5.title.is-5 {{ wine.name }}
-          h6.subtitle.is-6 {{ wine.winery || "Unknown" }}, {{ wine.year }}
-          .field.is-grouped.is-grouped-multiline
-            .control(
-              v-for="{label, field, prefix} in tags"
-              v-if="wine[field]"
-              :key="field"
-            )
-              .tags.has-addons
-                span.tag {{ label }}
-                span.tag.is-primary {{ prefix }}{{ wine[field] }}
-          .tags(v-if="wine.catalog.length")
-            span.tag.is-info Catalogs
-            span.tag(v-for="id in wine.catalog" :key="id")
-              | {{ (catalogs.find(catalog => catalog.id === id) || {}).name }}
+        Card(
+          :wine="wine"
+          :catalogs="catalogs"
+          @click.native="open(wine)"
+        )
 
-    .modal(:class="{'is-active': is_active}")
-      .modal-background(@click="is_active = false")
+    .modal(:class="{'is-active': is_modal_open}")
+      .modal-background(@click="is_modal_open = false")
       .modal-content
         .box
-          wine(ref="wine" :wine="id")
-      button.modal-close.is-large(@click="is_active = false")
+          Editor(
+            ref="editor"
+            :wine="wine"
+            :parameters="parameters"
+            :catalogs="catalogs.filter(catalog => catalog.Customized)"
+            :errors="errors"
+            @save="save"
+            @delete="remove"
+          )
+      button.modal-close.is-large(@click="is_modal_open = false")
 </template>
 
 <script>
-import Wine from "../components/Wine";
+import Card from "../components/WineCard";
+import Editor from "../components/WineEditor";
 
 export default {
   name: "Dashboard",
 
-  components: { Wine },
+  components: { Card, Editor },
 
   data: () => ({
     id: undefined,
-    is_active: false,
-
-    tags: [
-      { label: "Type", field: "type" },
-      { label: "Size", field: "size" },
-      { label: "Price", field: "price", prefix: "$" },
-      { label: "Storage", field: "storage_area" },
-      { label: "Territory", field: "territory" },
-      { label: "Region", field: "region" },
-      { label: "Country", field: "country" }
-    ],
+    is_modal_open: false,
 
     wines: [],
-    catalogs: []
+    catalogs: [],
+    parameters: {},
+
+    errors: {}
   }),
+
+  computed: {
+    wine() {
+      return this.wines.find(w => w.id === this.id);
+    }
+  },
 
   mounted() {
     this.$http.get("/wines/").then(response => (this.wines = response.data));
+
+    this.$http
+      .get("/catalogs/parameters/")
+      .then(response => (this.parameters = response.data));
+
     this.$http
       .get("/catalogs/")
       .then(response => (this.catalogs = response.data));
   },
 
   methods: {
-    open(id) {
-      this.id = id;
-      this.is_active = true;
-      this.$nextTick(() => this.$refs.wine.reset());
+    open(wine) {
+      this.id = wine.id;
+      this.$refs.editor.reset();
+      this.$nextTick(() => (this.is_modal_open = true));
+    },
+
+    save(wine) {
+      this.$http
+        .request({
+          url: "/wines/",
+          method: this.id ? "patch" : "post",
+          params: { id: this.id },
+          data: [wine]
+        })
+        .then(response => {
+          this.is_modal_open = false;
+
+          if (this.id) {
+            let index = this.wines.findIndex(wine => wine.id === this.id);
+            this.wines[index] = wine;
+          } else {
+            wine.id = response.data[0];
+            this.wines.push(wine);
+          }
+
+          this.$http
+            .get("/catalogs/parameters/")
+            .then(response => (this.parameters = response.data));
+        })
+        .catch(error => {
+          if (error.response.status === 422) {
+            this.errors = error.response.data;
+          }
+        });
+    },
+
+    remove() {
+      this.$http
+        .request({ url: "/wines/", method: "delete", params: { id: this.id } })
+        .then(() => {
+          this.is_modal_open = false;
+          this.wines.splice(
+            this.wines.findIndex(wine => wine.id === this.id),
+            1
+          );
+        });
     }
   }
 };
@@ -80,7 +124,6 @@ export default {
 <style lang="stylus">
 #dashboard .columns .column .box {
   height: 100%;
-  cursor: pointer;
 
   & .columns {
     height: 100%;

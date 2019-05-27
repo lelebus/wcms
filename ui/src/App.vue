@@ -1,54 +1,37 @@
-<template>
-  <div id="app">
-    <nav class="navbar is-fixed-top">
-      <div class="navbar-brand">
-        <router-link
+<template lang="pug">
+  #app
+    nav.navbar.is-fixed-top
+      .navbar-brand
+        router-link.navbar-item(
           to="/"
-          class="navbar-item"
-        >
-          <img src="http://via.placeholder.com/120x30">
-        </router-link>
-
-        <a
-          :class="['navbar-burger', 'burger', {'is-active': expanded}]"
-          @click="expanded = !expanded"
-        >
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-        </a>
-      </div>
-
-      <div :class="['navbar-menu', {'is-active': expanded}]">
-        <div class="navbar-end">
-          <router-link
+          @click.native="navbar_expanded = false"
+        )
+          img(src="../static/logo.jpg" style="height:50px;max-height:initial;")
+        a.navbar-burger.burger(
+          :class="{'is-active': navbar_expanded}"
+          @click="navbar_expanded = !navbar_expanded"
+        )
+          span
+          span
+          span
+      .navbar-menu(:class="{'is-active': navbar_expanded}")
+        .navbar-end
+          router-link.navbar-item(
             to="/import"
-            class="navbar-item"
             exact-active-class="is-active"
-          >
-            <span>IMPORT</span>
-          </router-link>
-
-          <router-link
+            @click.native="navbar_expanded = false"
+          ) IMPORT
+          router-link.navbar-item(
             to="/export"
-            class="navbar-item"
             exact-active-class="is-active"
-          >
-            <span>EXPORT</span>
-          </router-link>
-
-          <router-link
-            to="/catalog/new"
-            class="navbar-item"
+            @click.native="navbar_expanded = false"
+          ) EXPORT
+          router-link.navbar-item(
+            to="/catalog/dashboard"
             exact-active-class="is-active"
-          >
-            <span>CREATE CATALOG</span>
-          </router-link>
-        </div>
-      </div>
-    </nav>
-
-    <router-view style="margin-top: 25px;"/>
+            @click.native="navbar_expanded = false"
+          ) CATALOGS
+    router-view(style="margin-top:25px;")
   </div>
 </template>
 
@@ -58,7 +41,7 @@ export default {
 
   data() {
     return {
-      expanded: false
+      navbar_expanded: false
     };
   }
 };
