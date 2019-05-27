@@ -71,6 +71,7 @@ export default {
 
   methods: {
     open(wine) {
+      this.errors = {};
       this.id = wine.id;
       this.$refs.editor.reset();
       this.$nextTick(() => (this.is_modal_open = true));
