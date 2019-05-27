@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS wine (
   price float NOT NULL,
   catalogs int[],
   details text,
-  internal_notes text,
-  is_active boolean
+  internal_notes text
 );
 
 CREATE TABLE IF NOT EXISTS catalog (

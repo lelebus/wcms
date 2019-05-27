@@ -133,6 +133,7 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 		log.Println(err)
+		return
 	}
 
 	ids := []int{}
@@ -153,7 +154,7 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 
 		if !catalog.Customized {
 			// get wines matching catalog parameters
-			wines, err := getMatchingIDs(catalog.ID)
+			wines, err := getMatchingIDs(catalog)
 			if err != nil {
 				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
 				log.Println(err)
@@ -161,6 +162,8 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 			}
 			catalog.Wines = wines
 		}
+
+		log.Println(catalog.Wines)
 
 		id, err := insertCatalog(catalog)
 		if err != nil {
@@ -203,40 +206,37 @@ func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
 	return catalogs, nil
 }
 
-func getMatchingIDs(id int) ([]string, error) {
-
+func getMatchingIDs(catalog Catalog) ([]int, error) {
 	//query database
 	query := `
-			SELECT w.id FROM wine w, catalog c WHERE
-			c.id = $1 AND
-			c.is_customized = false AND
-		  	( ARRAY[w.type] <@ (c.type) OR c.type = '{}' ) AND
-		  	( ARRAY[w.size] <@ (c.size) OR c.size = '{}' ) AND
-		  	( ARRAY[w.year] <@ (c.year) OR c.year = '{}' ) AND
-		  	( ARRAY[w.territory] <@ (c.territory) OR c.territory = '{}' ) AND
-		  	( ARRAY[w.region] <@ (c.region) OR c.region = '{}' ) AND
-		  	( ARRAY[w.country] <@ (c.country) OR c.country = '{}' ) AND
-			( ARRAY[w.winery] <@ (c.winery) OR c.winery = '{}' );`
+	SELECT DISTINCT w.id FROM wine w, catalog c WHERE c.is_customized = false AND
+	( ARRAY[w.type] <@ ($1) OR $1 = '{}' ) AND
+	( ARRAY[w.size] <@ ($2) OR $2 = '{}' ) AND
+	( ARRAY[w.year] <@ ($3) OR $3 = '{}' ) AND
+	( ARRAY[w.territory] <@ ($4) OR $4 = '{}' ) AND
+	( ARRAY[w.region] <@ ($5) OR $5 = '{}' ) AND
+	( ARRAY[w.country] <@ ($6) OR $6 = '{}' ) AND
+	( ARRAY[w.winery] <@ ($7) OR $7 = '{}' );`
 
-	rows, err := DB.Query(query, id)
+	rows, err := DB.Query(query, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Year), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery))
 	if err != nil {
-		err = errors.New("ERROR in retrieving matching wines to catalog " + string(id) + ": " + err.Error())
+		err = errors.New("ERROR in retrieving matching wines to catalog: " + err.Error())
 		return nil, err
 	}
 	defer rows.Close()
 
 	// read retrieved lines
-	array := make([]string, 0)
+	array := make([]int, 0)
 	for rows.Next() {
-		var id string
+		var id int
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
 			return nil, err
 		}
-
 		array = append(array, id)
 	}
+
 	return array, nil
 }
 

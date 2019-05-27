@@ -349,7 +349,7 @@ func insertWine(wine Wine) (int, error) {
 func getMatchingIDs(wine Wine) ([]int, error) {
 	//query database
 	query := `
-	SELECT c.id FROM catalog c WHERE
+	SELECT DISTINCT c.id FROM catalog c WHERE c.is_customized = false AND
 	( ARRAY[$1] <@ (c.type) OR c.type = '{}' ) AND
 	( ARRAY[$2]::float[] <@ (c.size) OR c.size = '{}' ) AND
 	( ARRAY[$3]::int[] <@ (c.year) OR c.year = '{}' ) AND
