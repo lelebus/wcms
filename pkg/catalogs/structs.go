@@ -12,7 +12,7 @@ type Catalog struct {
 	Region     []string  `json:"region"`
 	Country    []string  `json:"country"`
 	Winery     []string  `json:"winery"`
-	Wines      []int     `json:"wines"`
+	Wines      []int64   `json:"wines"`
 	Child      []Catalog `json:"child"`
 	Customized bool
 }

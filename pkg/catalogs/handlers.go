@@ -206,7 +206,7 @@ func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
 	return catalogs, nil
 }
 
-func getMatchingIDs(catalog Catalog) ([]int, error) {
+func getMatchingIDs(catalog Catalog) ([]int64, error) {
 	//query database
 	query := `
 	SELECT DISTINCT w.id FROM wine w, catalog c WHERE c.is_customized = false AND
@@ -226,9 +226,9 @@ func getMatchingIDs(catalog Catalog) ([]int, error) {
 	defer rows.Close()
 
 	// read retrieved lines
-	array := make([]int, 0)
+	array := make([]int64, 0)
 	for rows.Next() {
-		var id int
+		var id int64
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())

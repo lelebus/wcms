@@ -346,7 +346,7 @@ func insertWine(wine Wine) (int, error) {
 	return wine.ID, nil
 }
 
-func getMatchingIDs(wine Wine) ([]int, error) {
+func getMatchingIDs(wine Wine) ([]int64, error) {
 	//query database
 	query := `
 	SELECT DISTINCT c.id FROM catalog c WHERE c.is_customized = false AND
@@ -366,9 +366,9 @@ func getMatchingIDs(wine Wine) ([]int, error) {
 	defer rows.Close()
 
 	// read retrieved lines
-	array := make([]int, 0)
+	array := make([]int64, 0)
 	for rows.Next() {
-		var id int
+		var id int64
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved ids: " + err.Error())
@@ -419,9 +419,9 @@ func updateWineDB(wine Wine) error {
 	defer rows.Close()
 
 	// read retrieved lines
-	catalogs := make([]int, 0)
+	catalogs := make([]int64, 0)
 	for rows.Next() {
-		var id int
+		var id int64
 		err = rows.Scan(&id)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved catalog ids: " + err.Error())
