@@ -237,7 +237,7 @@ export default {
 
         if (this.customized) {
           return merge(pick(this, fields), {
-            wines: this.winesIds
+            wines: this.wineIds
           });
         } else {
           return pick(
