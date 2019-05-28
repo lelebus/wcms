@@ -91,7 +91,9 @@
             .level-left
               .level-item(style="display:block;")
                   h5.title.is-5(style="margin-bottom:1.2em;") {{ wine.name }}
-                  h6.subtitle.is-6 {{ wine.winery || "Unknown" }}, {{ wine.year }}
+                  h6.subtitle.is-6
+                    span {{ wine.winery || "Unknown" }}
+                    span(v-if="wine.year") , {{ wine.year }}
             .level-right
               .level-item
                 a.delete.is-large(@click="removeWine(wine.id)")
@@ -350,7 +352,11 @@ export default {
     },
 
     customLabel(wine) {
-      return `${wine.name}, ${wine.winery || "Unknown"}, ${wine.year}`;
+      if (wine.year) {
+        return `${wine.name}, ${wine.winery || "Unknown"}, ${wine.year}`;
+      } else {
+        return `${wine.name}, ${wine.winery || "Unknown"}`;
+      }
     },
 
     addWine() {

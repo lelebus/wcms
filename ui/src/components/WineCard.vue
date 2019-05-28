@@ -1,7 +1,9 @@
 <template lang="pug">
   .box.wine-card
     h5.title.is-5 {{ wine.name }}
-    h6.subtitle.is-6 {{ wine.winery || "Unknown" }}, {{ wine.year }}
+    h6.subtitle.is-6
+      span {{ wine.winery || "Unknown" }}
+      span(v-if="wine.year") , {{ wine.year }}
     .field.is-grouped.is-grouped-multiline
       .control(
         v-for="{label, field, prefix} in tags"
@@ -12,8 +14,7 @@
           span.tag {{ label }}
           span.tag.is-primary {{ prefix }}{{ wine[field] }}
     .tags(v-if="wine.catalog.length")
-      span.tag.is-info Catalogs
-      span.tag(v-for="id in wine.catalog" :key="id")
+      span.tag.is-info(v-for="id in wine.catalog" :key="id")
         | {{ getCatalogPath(id) }}
 </template>
 
@@ -37,7 +38,7 @@ export default {
     tags: [
       { label: "Type", field: "type" },
       { label: "Size", field: "size" },
-      { label: "Price", field: "price", prefix: "$" },
+      { label: "Price", field: "price", prefix: "€" },
       { label: "Storage", field: "storage_area" },
       { label: "Territory", field: "territory" },
       { label: "Region", field: "region" },
