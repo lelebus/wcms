@@ -249,10 +249,9 @@ func checkWineParameter(wine Wine) map[string]string {
 		reqErr["winery"] = e
 	}
 
-	if wine.Year == "" {
-		e := "YEAR of wine must be an integer"
-		reqErr["year"] = e
-	} else {
+	log.Println(wine)
+
+	if wine.Year != "" {
 		dt := time.Now()
 		today := dt.Format("02-01-2006")
 		currentYear, _ := strconv.ParseInt(today[6:], 10, 64)
@@ -266,7 +265,14 @@ func checkWineParameter(wine Wine) map[string]string {
 			e := "YEAR of wine cannot be set in the future"
 			reqErr["year"] = e
 		}
+		if productionYear < 1800 {
+			e := "Wine produced in this year is not drinkable anymore"
+			reqErr["year"] = e
+		}
 	}
+
+	log.Println("YEAR: " + wine.Year)
+	log.Println(wine)
 
 	if wine.Region == "" && wine.Territory == "" {
 		e := "Either REGION or TERRITORY must be set"
@@ -295,7 +301,10 @@ func checkWineParameter(wine Wine) map[string]string {
 
 // Insert wine in database, checking insertion in other catalogs
 func insertWine(wine Wine) (int, error) {
-	log.Println(wine)
+	if wine.Year == "" {
+		wine.Year = "0"
+	}
+
 	// get catalogs matching wine's parameters
 	catalogs, err := getMatchingIDs(wine)
 	if err != nil {
@@ -352,13 +361,12 @@ func getMatchingIDs(wine Wine) ([]int64, error) {
 	SELECT DISTINCT c.id FROM catalog c WHERE c.is_customized = false AND
 	( ARRAY[$1] <@ (c.type) OR c.type = '{}' ) AND
 	( ARRAY[$2]::float[] <@ (c.size) OR c.size = '{}' ) AND
-	( ARRAY[$3]::int[] <@ (c.year) OR c.year = '{}' ) AND
+	( ARRAY[$3] <@ (c.winery) OR c.winery = '{}' ) AND
 	( ARRAY[$4] <@ (c.territory) OR c.territory = '{}' ) AND
 	( ARRAY[$5] <@ (c.region) OR c.region = '{}' ) AND
-	( ARRAY[$6] <@ (c.country) OR c.country = '{}' ) AND
-	( ARRAY[$7] <@ (c.winery) OR c.winery = '{}' );`
+	( ARRAY[$6] <@ (c.country) OR c.country = '{}' );`
 
-	rows, err := DB.Query(query, wine.Type, wine.Size, wine.Year, wine.Territory, wine.Region, wine.Country, wine.Winery)
+	rows, err := DB.Query(query, wine.Type, wine.Size, wine.Winery, wine.Territory, wine.Region, wine.Country)
 	if err != nil {
 		err = errors.New("ERROR in retrieving catalog ids matching wine " + wine.Name + " BY " + wine.Winery + " - " + wine.Year + ": " + err.Error())
 		return nil, err

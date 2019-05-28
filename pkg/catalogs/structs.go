@@ -7,12 +7,11 @@ type Catalog struct {
 	Parent     int       `json:"parent"`
 	Type       []string  `json:"type"`
 	Size       []string  `json:"size"`
-	Year       []string  `json:"year"`
 	Territory  []string  `json:"territory"`
 	Region     []string  `json:"region"`
 	Country    []string  `json:"country"`
 	Winery     []string  `json:"winery"`
 	Wines      []int64   `json:"wines"`
 	Child      []Catalog `json:"child"`
-	Customized bool
+	Customized bool      `json:"Customized"`
 }

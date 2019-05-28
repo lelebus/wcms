@@ -52,7 +52,7 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 	var err error
 
-	query := `SELECT id, name, level, parent, type, size, year, territory, region, country, winery, wines, is_customized FROM catalog WHERE `
+	query := `SELECT id, name, level, parent, type, size, territory, region, country, winery, wines, is_customized FROM catalog WHERE `
 	if id == "" {
 		query += `id <> 0;`
 	} else {
@@ -103,7 +103,7 @@ func QueryCatalog(query string) ([]Catalog, error) {
 	for rows.Next() {
 		catalog := Catalog{}
 
-		err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Year), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Wines), &catalog.Customized)
+		err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Wines), &catalog.Customized)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved catalog entries: " + err.Error())
 			return nil, err
@@ -141,15 +141,15 @@ func createCatalog(w http.ResponseWriter, r *http.Request) {
 		if catalog.Level == 0 {
 			catalog.Parent = 0
 		}
-		if len(catalog.Wines) > 0 {
-			catalog.Customized = true
+		if catalog.Customized == true {
 			catalog.Type = []string{}
 			catalog.Size = []string{}
-			catalog.Year = []string{}
 			catalog.Territory = []string{}
 			catalog.Region = []string{}
 			catalog.Country = []string{}
 			catalog.Winery = []string{}
+		} else {
+			catalog.Wines = []int64{}
 		}
 
 		if !catalog.Customized {
@@ -209,16 +209,15 @@ func readCatalogFromJSON(r *http.Request) ([]Catalog, error) {
 func getMatchingIDs(catalog Catalog) ([]int64, error) {
 	//query database
 	query := `
-	SELECT DISTINCT w.id FROM wine w, catalog c WHERE c.is_customized = false AND
+	SELECT DISTINCT w.id FROM wine w WHERE
 	( ARRAY[w.type] <@ ($1) OR $1 = '{}' ) AND
 	( ARRAY[w.size] <@ ($2) OR $2 = '{}' ) AND
-	( ARRAY[w.year] <@ ($3) OR $3 = '{}' ) AND
+	( ARRAY[w.winery] <@ ($3) OR $3 = '{}' ) AND
 	( ARRAY[w.territory] <@ ($4) OR $4 = '{}' ) AND
 	( ARRAY[w.region] <@ ($5) OR $5 = '{}' ) AND
-	( ARRAY[w.country] <@ ($6) OR $6 = '{}' ) AND
-	( ARRAY[w.winery] <@ ($7) OR $7 = '{}' );`
+	( ARRAY[w.country] <@ ($6) OR $6 = '{}' );`
 
-	rows, err := DB.Query(query, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Year), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery))
+	rows, err := DB.Query(query, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Winery), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country))
 	if err != nil {
 		err = errors.New("ERROR in retrieving matching wines to catalog: " + err.Error())
 		return nil, err
@@ -245,10 +244,10 @@ func insertCatalog(catalog Catalog) (int, error) {
 	var err error
 
 	// insert catalog
-	query = `INSERT INTO catalog (name, level, parent, type, size, year, territory, region, country, winery, wines, is_customized)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id;`
+	query = `INSERT INTO catalog (name, level, parent, type, size, territory, region, country, winery, wines, is_customized)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id;`
 
-	result := DB.QueryRow(query, catalog.Name, catalog.Level, catalog.Parent, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Year), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery), pq.Array(catalog.Wines), catalog.Customized)
+	result := DB.QueryRow(query, catalog.Name, catalog.Level, catalog.Parent, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery), pq.Array(catalog.Wines), catalog.Customized)
 
 	err = result.Scan(&catalog.ID)
 	if err != nil {
@@ -296,15 +295,47 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 	for _, catalog := range catalogs {
 		// update name
 		if catalog.Customized {
+			// Create transaction for DELETE of wine and its references in catalog
+			tx, err := DB.Begin()
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR in beginning INSERT procedure for wine" + err.Error())
+				return
+			}
+
+			query = `UPDATE wines SET catalogs = array_remove(catalogs, $1) WHERE ARRAY[$1] <@ catalogs;`
+			_, err = DB.Exec(query, catalog.ID)
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR deleting old catalog \"" + catalog.Name + "\" references in wines: " + err.Error())
+				return
+			}
+
 			query = `UPDATE catalog SET name = $1, wines = $2 WHERE id = $3;`
 			_, err = DB.Exec(query, catalog.Name, pq.Array(catalog.Wines), catalog.ID)
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR updating catalog \"" + catalog.Name + "\"in DB: " + err.Error())
+				return
+			}
+
+			// insert catalog id in matching wines
+			query = `UPDATE wine SET catalogs = array_append(catalogs, $1) WHERE $2 @> ARRAY[id];`
+			err = tx.Commit()
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR in completing commit for upload PATCH: " + err.Error())
+				return
+			}
+
 		} else {
 			query = `UPDATE catalog SET name = $1 WHERE id = $2;`
 			_, err = DB.Exec(query, catalog.Name, catalog.ID)
-		}
-		if err != nil {
-			http.Error(w, http.StatusText(500), http.StatusInternalServerError)
-			log.Println("ERROR updating catalog \"" + catalog.Name + "\"in DB: " + err.Error())
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR updating catalog \"" + catalog.Name + "\"in DB: " + err.Error())
+				return
+			}
 		}
 
 		log.Printf("SUCCESSFUL update: \"%v\" \n", catalog.Name)
