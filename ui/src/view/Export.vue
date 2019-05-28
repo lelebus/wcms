@@ -65,13 +65,6 @@ export default {
         }
       ];
 
-      ws.addRow({
-        price: 500,
-        year: 2010,
-        storage_area: "X 55",
-        name: "test wine"
-      });
-
       const addCatalog = catalog => {
         ws.addRow([catalog.name]);
 
@@ -93,14 +86,28 @@ export default {
           childrens.forEach(addCatalog);
         } else if (catalog.wines.length) {
           ws.addRows(
-            catalog.wines.map(w => ({
-              storage_area: w.storage_area,
-              name: w.name,
-              description: w.description,
-              year: w.year,
-              winery: w.winery,
-              price: w.price
-            }))
+            catalog.wines.map(id => {
+              var w = this.wines.find(w => w.id === id);
+
+              if (w.year) {
+                return {
+                  storage_area: w.storage_area,
+                  name: w.name,
+                  description: w.description,
+                  year: Number(w.year),
+                  winery: w.winery,
+                  price: Number(w.price)
+                };
+              } else {
+                return {
+                  storage_area: w.storage_area,
+                  name: w.name,
+                  description: w.description,
+                  winery: w.winery,
+                  price: Number(w.price)
+                };
+              }
+            })
           );
         }
       };

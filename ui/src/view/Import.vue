@@ -2,7 +2,7 @@
   #import
     .columns
       .column.is-narrow
-        .file.has-name
+        .file.has-name.is-primary
           label.file-label
             input.file-input(
               type="file"
