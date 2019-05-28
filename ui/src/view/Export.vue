@@ -51,8 +51,12 @@ export default {
       ws.columns = [
         { key: "storage_area", width: 8, style: { font } },
         { key: "name", width: 28, style: { font } },
-        { key: "description", width: 26, style: { font } },
-        { key: "year", width: 6, style: { font } },
+        { key: "description", width: 25, style: { font } },
+        {
+          key: "year",
+          width: 7,
+          style: { font, alignment: { horizontal: "left" } }
+        },
         { key: "winery", width: 20, style: { font } },
         {
           key: "price",
@@ -76,7 +80,7 @@ export default {
             ws.lastRow.font = { size: 16, bold: true };
             break;
           case 2:
-            ws.lastRow.font = { size: 14, bold: true };
+            ws.lastRow.font = { bold: true };
             break;
         }
 
@@ -112,10 +116,7 @@ export default {
         }
       };
 
-      this.catalogs
-        .filter(c => c.level === 0)
-        .sort(c => c.id)
-        .forEach(addCatalog);
+      this.catalogs.filter(c => c.level === 0).forEach(addCatalog);
 
       wb.xlsx.writeBuffer().then(buffer => {
         var blob = new Blob([buffer.buffer], {

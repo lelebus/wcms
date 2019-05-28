@@ -303,7 +303,7 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			query = `UPDATE wines SET catalogs = array_remove(catalogs, $1) WHERE ARRAY[$1] <@ catalogs;`
+			query = `UPDATE wine SET catalogs = array_remove(catalogs, $1) WHERE ARRAY[$1]::integer[] <@ catalogs;`
 			_, err = DB.Exec(query, catalog.ID)
 			if err != nil {
 				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
@@ -321,6 +321,13 @@ func updateCatalog(w http.ResponseWriter, r *http.Request) {
 
 			// insert catalog id in matching wines
 			query = `UPDATE wine SET catalogs = array_append(catalogs, $1) WHERE $2 @> ARRAY[id];`
+			_, err = DB.Exec(query, catalog.ID, pq.Array(catalog.Wines))
+			if err != nil {
+				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+				log.Println("ERROR updating catalog \"" + catalog.Name + "\"in DB: " + err.Error())
+				return
+			}
+
 			err = tx.Commit()
 			if err != nil {
 				http.Error(w, http.StatusText(500), http.StatusInternalServerError)
