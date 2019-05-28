@@ -28,6 +28,11 @@ Follow [this guide](https://golang.org/doc/install) to download the Go Programmi
 Read [this file](ui/README.md) for a guide
 
 ## Deployment
+	
+### Build
+	
+- Build the static files `parcel build ui/src/index.html && cp -r dist/ static/`
+- Build the back-end files `go build`
 
 ### Configuration
 
