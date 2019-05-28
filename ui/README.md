@@ -1,11 +1,14 @@
-# Prerequisite
-- install `yarn` following the instructions [here](https://yarnpkg.com/en/docs/install)
-- `yarn global add parcel-bundler`
+## Prerequisites
 
-# Developement
+### Yarn
+Install **yarn** following the instructions [here](https://yarnpkg.com/en/docs/install)
 
-`parcel src/index.html`
+## Development
 
-# Build
+- From the terminal, navigate to this folder
+- Install **parcel-bundler** `yarn global add parcel-bundler`
+- Run `parcel src/index.html`
 
-`parcel build src/index.html && cp -r dist/ ../static/`
+## Deployment
+
+Build the files into _static/_ folder `parcel build src/index.html && cp -r dist/ ../static/`
