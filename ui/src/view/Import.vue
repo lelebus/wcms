@@ -2,7 +2,7 @@
   #import
     .columns
       .column.is-narrow
-        .file.has-name
+        .file.has-name.is-primary
           label.file-label
             input.file-input(
               type="file"
@@ -16,6 +16,11 @@
             span.file-name(v-if="file_name") {{ file_name }}
       .column(v-if="wines.length")
         button.button.is-primary(@click="upload") Upload
+      .column.is-narrow(v-if="!wines.length")
+        a.button.is-info(href="../../static/template.xls")
+          span.icon
+            i.fas.fa-file-download
+          span Download template
 
     .columns.is-multiline(v-if="wines.length" style="margin-top:0;")
       .column.is-one-third(v-for="(wine, index) in wines" :key="index")
