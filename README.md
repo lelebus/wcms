@@ -2,12 +2,12 @@
 
 The goal of the web-application is an efficient management of a wine cellar.
 
-The user is able to insert new wines manually, by filling in the fields with the necessary information. Alternatively, it is possible to import all wines through a CSV or EXCEL file, matching the downloadable template.
+The user is able to insert new wines **manually**, by filling in the fields with the necessary information. Alternatively, it is possible to **import** all wines through a _csv_ or _excel_ file, matching the downloadable template.
 
 Wines are organized into catalogs, which can be either automatic or manual.
 For **automatic** catalogs, all wines that match the chosen filters are added (e.g. Catalog "Italian Wines" adds all italian wines). **Customized** catalogs, instead, allow the user to add wines manually. 
 
-One of the benefits of using the WCMS is not being forced to work on excel files. Therefore, there is also the functionality to download an automatically generated file, ready for printing. 
+One of the benefits of using the WCMS is not being forced to work on excel files. Therefore, there is also the functionality to **download** an automatically generated file, ready for printing. 
 
 ---
 
@@ -21,7 +21,7 @@ Follow [this guide](https://www.postgresql.org/download/) to download the Databa
 
 ### Golang
 
-Follow [this guide] (https://golang.org/doc/install) to download the Go Programming Language
+Follow [this guide](https://golang.org/doc/install) to download the Go Programming Language
 
 ### Yarn with Parcel-Bundler
 
@@ -54,8 +54,7 @@ Read [this file](ui/README.md) for a guide
 
 - Launch the application through the launch file **wcms**
 - Connect to the application through a web browser:
-
-_navigate to `HOST:APPLICATION_PORT/`_
+- navigate to `HOST:APPLICATION_PORT/`
 
 ---
 
@@ -75,4 +74,4 @@ _navigate to `HOST:APPLICATION_PORT/`_
 
 ## License
 
-This project is licensed under the MIT License - [see the details]](LICENSE.md)
+This project is licensed under the MIT License - [see the details](LICENSE.md)
