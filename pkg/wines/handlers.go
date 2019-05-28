@@ -115,6 +115,10 @@ func queryWine(id string) ([]byte, error) {
 			return nil, err
 		}
 
+		if wine.Year == "0" {
+			wine.Year = ""
+		}
+
 		wines = append(wines, wine)
 	}
 
