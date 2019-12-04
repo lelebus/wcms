@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS wine (
   id SERIAL PRIMARY KEY UNIQUE,
+  position int,
   storage_area text NOT NULL,
   type text NOT NULL,
   size float NOT NULL,
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS wine (
 
 CREATE TABLE IF NOT EXISTS catalog (
   id SERIAL PRIMARY KEY,
+  position int,
   name text NOT NULL UNIQUE,
   level int NOT NULL,
   parent int references catalog(id) ON DELETE CASCADE,

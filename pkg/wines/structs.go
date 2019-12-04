@@ -2,6 +2,7 @@ package wines
 
 type Wine struct {
 	ID            int     `json:"id"`
+	Position      int     `json:"position"`
 	StorageArea   string  `json:"storage_area"`
 	Type          string  `json:"type"`
 	Size          string  `json:"size"`

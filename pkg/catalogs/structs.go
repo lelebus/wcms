@@ -2,6 +2,7 @@ package catalogs
 
 type Catalog struct {
 	ID         int       `json:"id"`
+	Position   int       `json:"position"`
 	Name       string    `json:"name"`
 	Level      int       `json:"level"`
 	Parent     int       `json:"parent"`

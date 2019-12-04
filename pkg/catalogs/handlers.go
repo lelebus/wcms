@@ -52,7 +52,7 @@ func getCatalog(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 	var err error
 
-	query := `SELECT id, name, level, parent, type, size, territory, region, country, winery, wines, is_customized FROM catalog WHERE `
+	query := `SELECT id, position, name, level, parent, type, size, territory, region, country, winery, wines, is_customized FROM catalog WHERE `
 	if id == "" {
 		query += `id <> 0;`
 	} else {
@@ -103,7 +103,7 @@ func QueryCatalog(query string) ([]Catalog, error) {
 	for rows.Next() {
 		catalog := Catalog{}
 
-		err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Wines), &catalog.Customized)
+		err = rows.Scan(&catalog.ID, &.catalog.Position, &catalog.Name, &catalog.Level, &catalog.Parent, pq.Array(&catalog.Type), pq.Array(&catalog.Size), pq.Array(&catalog.Territory), pq.Array(&catalog.Region), pq.Array(&catalog.Country), pq.Array(&catalog.Winery), pq.Array(&catalog.Wines), &catalog.Customized)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved catalog entries: " + err.Error())
 			return nil, err

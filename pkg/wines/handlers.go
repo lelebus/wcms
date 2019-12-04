@@ -84,7 +84,7 @@ func getWine(w http.ResponseWriter, r *http.Request) {
 
 func queryWine(id string) ([]byte, error) {
 
-	var query = `SELECT id, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes FROM wine `
+	var query = `SELECT id, position, storage_area, type, size, name, winery, year, territory, region, country, price, catalogs, details, internal_notes FROM wine `
 	var rows *sql.Rows
 	var err error
 
@@ -105,7 +105,7 @@ func queryWine(id string) ([]byte, error) {
 	for rows.Next() {
 		wine := Wine{}
 
-		err = rows.Scan(&wine.ID, &wine.StorageArea, &wine.Type, &wine.Size, &wine.Name, &wine.Winery, &wine.Year, &wine.Territory, &wine.Region, &wine.Country, &wine.Price, pq.Array(&wine.Catalogs), &wine.Details, &wine.InternalNotes)
+		err = rows.Scan(&wine.ID, &wine.Position, &wine.StorageArea, &wine.Type, &wine.Size, &wine.Name, &wine.Winery, &wine.Year, &wine.Territory, &wine.Region, &wine.Country, &wine.Price, pq.Array(&wine.Catalogs), &wine.Details, &wine.InternalNotes)
 		if err != nil {
 			err = errors.New("ERROR in scanning retrieved wine entries: " + err.Error())
 			return nil, err
