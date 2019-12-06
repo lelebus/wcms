@@ -2,6 +2,7 @@ package main
 
 import (
 	catalog "WCMS/pkg/catalogs"
+	export "WCMS/pkg/export"
 	purchase "WCMS/pkg/purchases"
 	wine "WCMS/pkg/wines"
 	"database/sql"
