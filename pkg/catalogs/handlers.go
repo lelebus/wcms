@@ -244,8 +244,8 @@ func insertCatalog(catalog Catalog) (int, error) {
 	var err error
 
 	// insert catalog
-	query = `INSERT INTO catalog (name, level, parent, type, size, territory, region, country, winery, wines, is_customized)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id;`
+	query = `INSERT INTO catalog (name, position, level, parent, type, size, territory, region, country, winery, wines, is_customized)
+	VALUES ($1, 0, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id;`
 
 	result := DB.QueryRow(query, catalog.Name, catalog.Level, catalog.Parent, pq.Array(catalog.Type), pq.Array(catalog.Size), pq.Array(catalog.Territory), pq.Array(catalog.Region), pq.Array(catalog.Country), pq.Array(catalog.Winery), pq.Array(catalog.Wines), catalog.Customized)
 

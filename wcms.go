@@ -113,7 +113,6 @@ func main() {
 	http.HandleFunc(catalog.ParameterPath, catalog.GetAllParameters)
 	http.HandleFunc(catalog.GroupedPath, catalog.GetGroupedCatalogs)
 	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
-	http.HandleFunc(catalog.URLPath, catalog.CatalogHandler)
 	http.HandleFunc(export.URLPath, export.SetPosition)
 	http.HandleFunc("/", serveJS)
 	http.HandleFunc("/favicon.ico", serveFavicon)
